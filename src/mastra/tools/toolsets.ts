@@ -1,6 +1,7 @@
 import { canvasTools } from './canvas';
 import { slackCodeMode } from './code-mode/slack';
 import { fetchUrlTool } from './fetch-url';
+import { generateImageTool } from './generate-image';
 import { grepTool } from './grep';
 import { scheduledTaskTools } from './scheduled-tasks';
 import { searchWebTool } from './search-web';
@@ -31,5 +32,6 @@ export const deferredTools = {
   get_channel_info: slackTools.get_channel_info,
   list_channels: slackTools.list_channels,
   list_threads: slackTools.list_threads,
+  generate_image: generateImageTool,
   ...canvasTools,
 };

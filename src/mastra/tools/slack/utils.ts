@@ -1,6 +1,29 @@
 import type { Message } from 'chat';
 import { slack } from '../../chat/client';
-import { rawId } from '../../lib/ids';
+import { chat } from '../../chat/instance';
+import { chatChannelId, rawId } from '../../lib/ids';
+
+export async function assertReadableChannel({
+  channelId,
+  currentThreadId,
+}: {
+  channelId: string;
+  currentThreadId?: string;
+}) {
+  const id = chatChannelId(channelId);
+  const metadata = await chat().channel(id).fetchMetadata();
+  if (currentThreadId && id === chatChannelId(currentThreadId)) {
+    return metadata;
+  }
+
+  if (metadata.channelVisibility === 'workspace') {
+    return metadata;
+  }
+
+  throw new Error(
+    'Reading DMs, private channels, or external conversations is not allowed.'
+  );
+}
 
 export async function joinChannel(channelId: string): Promise<void> {
   try {

@@ -5,7 +5,7 @@ export const sandbox = {
 };
 
 export const agent = {
-  id: 'orchestrator',
+  id: 'gorkie',
   maxTokens: { input: 200_000, output: 32_768 },
   maxSteps: 1000,
 };

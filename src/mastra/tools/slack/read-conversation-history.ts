@@ -4,12 +4,17 @@ import { slack } from '../../chat/client';
 import { channelContext } from '../../lib/context';
 import { chatChannelId } from '../../lib/ids';
 import { input, output, slackMessageSchema } from '../../types/tools/index';
-import { formatMessage, joinChannel, slackThreadId } from './utils';
+import {
+  assertReadableChannel,
+  formatMessage,
+  joinChannel,
+  slackThreadId,
+} from './utils';
 
 export const readConversationHistoryTool = createTool({
   id: 'read_conversation_history',
   description:
-    'Read one chronological page of raw messages from a Slack channel or thread when exact wording matters. This does not search or filter message text. Use search_slack for one keyword query, Slack code mode for query-driven or exhaustive conversation analysis, and summarize_thread when a long thread only needs a summary. Public channels are joined automatically.',
+    'Read one chronological page of raw messages from a Slack channel or thread when exact wording matters. This does not search or filter message text. Use search_slack for one keyword query, Slack code mode for query-driven or exhaustive conversation analysis, and summarize_thread when a long thread only needs a summary. The current conversation is always readable; other channels must be public, and public channels are joined automatically.',
   inputSchema: input({
     channelId: z
       .string()
@@ -54,6 +59,10 @@ export const readConversationHistoryTool = createTool({
     }
 
     const chId = chatChannelId(resolvedChannelId);
+    await assertReadableChannel({
+      channelId: chId,
+      currentThreadId: ctx.threadId,
+    });
     await joinChannel(chId);
 
     const result = tid

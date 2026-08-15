@@ -5,12 +5,12 @@ import { slack } from '../../chat/client';
 import { channelContext } from '../../lib/context';
 import { chatChannelId } from '../../lib/ids';
 import { input, output } from '../../types/tools/index';
-import { joinChannel, slackThreadId } from './utils';
+import { assertReadableChannel, joinChannel, slackThreadId } from './utils';
 
 export const summarizeThreadTool = createTool({
   id: 'summarize_thread',
   description:
-    'Summarize up to 100 messages from one Slack thread without returning its full transcript to the caller. Defaults to the current thread and automatically joins public channels. Use read_conversation_history when exact wording or message metadata matters, and Slack code mode for exhaustive or cross-thread analysis.',
+    'Summarize up to 100 messages from one Slack thread without returning its full transcript to the caller. Defaults to the current thread. The current conversation is always readable; other threads must be in a public channel, which is joined automatically. Use read_conversation_history when exact wording or message metadata matters, and Slack code mode for exhaustive or cross-thread analysis.',
   inputSchema: input({
     threadId: z
       .string()
@@ -43,6 +43,7 @@ export const summarizeThreadTool = createTool({
     const target = slackThreadId({ threadId: suppliedThreadId });
 
     const channelId = chatChannelId(slack.channelIdFromThreadId(target));
+    await assertReadableChannel({ channelId, currentThreadId: ctx.threadId });
     await joinChannel(channelId);
 
     const result = await slack.fetchMessages(target, {

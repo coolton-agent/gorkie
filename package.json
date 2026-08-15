@@ -1,7 +1,7 @@
 {
-  "name": "mastra-slack-agent-template",
+  "name": "gorkie",
   "license": "MIT",
-  "description": "A customizable Mastra-powered assistant for Slack.",
+  "description": "An AI assistant for Slack, built on Mastra.",
   "type": "module",
   "module": "src/mastra/index.ts",
   "private": true,
@@ -33,6 +33,7 @@
     "@mastra/observability": "1.17.0",
     "@mastra/pg": "1.20.0",
     "@t3-oss/env-core": "^0.13.11",
+    "ai": "^7.0.66",
     "chat": "^4.35.0",
     "dotenv": "^17.4.2",
     "e2b": "^2.36.1",

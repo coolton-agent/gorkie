@@ -1,14 +1,14 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { chat } from '../../chat/instance';
 import { channelContext } from '../../lib/context';
 import { chatChannelId } from '../../lib/ids';
 import { input, output } from '../../types/tools/index';
+import { assertReadableChannel } from './utils';
 
 export const getChannelInfoTool = createTool({
   id: 'get_channel_info',
   description:
-    'Inspect one Slack channel by id. Returns its name, member count, DM status, and visibility. Defaults to the current channel. This does not read messages or discover channels by name.',
+    'Inspect one Slack channel by id. Returns its name, member count, DM status, and visibility. Defaults to the current channel. The current conversation is always readable; other channels must be public. This does not read messages or discover channels by name.',
   inputSchema: input({
     channelId: z
       .string()
@@ -37,7 +37,11 @@ export const getChannelInfoTool = createTool({
     if (!id) {
       throw new Error('No channel to inspect.');
     }
-    const info = await chat().channel(chatChannelId(id)).fetchMetadata();
+    const chId = chatChannelId(id);
+    const info = await assertReadableChannel({
+      channelId: chId,
+      currentThreadId: ctx.threadId,
+    });
     return {
       channelId: info.id,
       name: info.name,

@@ -47,3 +47,7 @@ export const explorer: ModelWithRetries[] = [
   { model: hackclub('openai/gpt-5.6-luna'), maxRetries: 3 },
   { model: opencode('gpt-5.6-luna'), maxRetries: 3 },
 ];
+
+export const images = hackClubProvider.imageModel(
+  'google/gemini-3.1-flash-image'
+);

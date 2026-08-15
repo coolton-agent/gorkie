@@ -1,7 +1,7 @@
 {
   "display_information": {
-    "name": "Mastra Agent",
-    "description": "A customizable Mastra-powered assistant",
+    "name": "gorkie",
+    "description": "An AI assistant for Slack, built on Mastra",
     "background_color": "#000000"
   },
   "features": {
@@ -11,11 +11,11 @@
       "messages_tab_read_only_enabled": false
     },
     "bot_user": {
-      "display_name": "Mastra Agent",
+      "display_name": "gorkie",
       "always_online": true
     },
     "agent_view": {
-      "agent_description": "Your AI assistant for Slack. Searches the web, writes and runs code, browses websites, manages scheduled tasks, and more."
+      "agent_description": "Your AI assistant for Slack. Searches the web, writes and runs code, generates images, browses websites, manages scheduled tasks, and more."
     }
   },
   "oauth_config": {

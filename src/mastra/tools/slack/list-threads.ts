@@ -4,12 +4,12 @@ import { slack } from '../../chat/client';
 import { channelContext } from '../../lib/context';
 import { chatChannelId } from '../../lib/ids';
 import { input, output, slackMessageSchema } from '../../types/tools/index';
-import { formatMessage, joinChannel } from './utils';
+import { assertReadableChannel, formatMessage, joinChannel } from './utils';
 
 export const listThreadsTool = createTool({
   id: 'list_threads',
   description:
-    'List recent threads in a Slack channel. Automatically joins public channels before reading. Defaults to the current channel.',
+    'List recent threads in a Slack channel. The current conversation is always readable; other channels must be public, and public channels are joined automatically. Defaults to the current channel.',
   inputSchema: input({
     channelId: z
       .string()
@@ -47,6 +47,10 @@ export const listThreadsTool = createTool({
     }
 
     const chId = chatChannelId(id);
+    await assertReadableChannel({
+      channelId: chId,
+      currentThreadId: ctx.threadId,
+    });
     await joinChannel(chId);
 
     const result = await slack.listThreads(chId, { limit, cursor });
