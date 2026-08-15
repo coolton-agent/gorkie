@@ -14,6 +14,7 @@ import { researchAgent as research } from './agents/research';
 import { summarizer } from './agents/summarizer';
 import { registerEvents } from './chat/events';
 import { setChat } from './chat/instance';
+import { buildAllowlist } from './lib/allowed-users';
 import { logger } from './lib/logger';
 
 process.on('unhandledRejection', (err: unknown) => {
@@ -69,13 +70,14 @@ await mastra.startWorkers();
 orchestrator
   .getChannels()
   ?.initialize(mastra)
-  .then(() => {
+  .then(async () => {
     const sdk = orchestrator.getChannels()?.sdk;
     if (!sdk) {
       return;
     }
     setChat(sdk);
     registerEvents();
+    await buildAllowlist();
     logger.info('[gorkie] online');
   })
   .catch((err: unknown) =>

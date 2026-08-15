@@ -1,10 +1,12 @@
 import type { Message, Thread } from 'chat';
 import { z } from 'zod';
+import { isUserAllowed } from '../lib/allowed-users';
 import { logger } from '../lib/logger';
 import { attachments } from './attachments';
 import { slack } from './client';
 import { handleCommand } from './commands';
 import { rawText, withoutLeadingMentions } from './message';
+import { offerOptIn } from './onboarding';
 import { threadState } from './state';
 
 type DefaultHandler = (thread: Thread, message: Message) => Promise<void>;
@@ -77,6 +79,10 @@ export async function onMention(
   if (isFromBot(message)) {
     return;
   }
+  if (!(await isUserAllowed(message.author.userId))) {
+    await offerOptIn(thread, message.author);
+    return;
+  }
   if (slack.decodeThreadId(message.threadId).threadTs === message.id) {
     await thread.setState({ respondOnThreadMessages: true });
   }
@@ -100,6 +106,12 @@ export async function onSubscribedMessage(
   if (!(isFollowingThread || message.isMention)) {
     return;
   }
+  // Onboarding was already offered on the first unauthorized mention
+  // (onMention); don't repeat the card for every subsequent message in a
+  // thread they still haven't opted into.
+  if (!(await isUserAllowed(message.author.userId))) {
+    return;
+  }
   if (await handleCommand({ message, thread })) {
     return;
   }
@@ -117,6 +129,10 @@ export async function onDirectMessage(
 ): Promise<void> {
   await captureSearchToken({ raw: message.raw, thread });
   if (isFromBot(message)) {
+    return;
+  }
+  if (!(await isUserAllowed(message.author.userId))) {
+    await offerOptIn(thread, message.author);
     return;
   }
   if (await handleCommand({ message, thread })) {

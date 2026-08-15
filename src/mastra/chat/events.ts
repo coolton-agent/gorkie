@@ -2,6 +2,7 @@ import { logger } from '../lib/logger';
 import { slack } from './client';
 import { content } from './content';
 import { chat } from './instance';
+import { acceptOptIn } from './onboarding';
 
 async function setStarters({
   channelId,
@@ -35,4 +36,6 @@ export function registerEvents(): void {
         logger.error('[events] publishHomeView failed', { error })
       )
   );
+
+  bot.onAction('opt_in_accept', acceptOptIn);
 }

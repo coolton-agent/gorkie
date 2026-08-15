@@ -20,6 +20,8 @@ touching the host machine.
 
 - Slack-native replies for mentions, DMs, and subscribed thread follow-ups,
   with real-time streaming and a typing indicator.
+- Optional opt-in allowlist (`OPT_IN_CHANNEL`): gate access to members of one
+  channel, with an in-Slack opt-in card for everyone else.
 - Per-thread [E2B][e2b] sandbox sessions: isolated cloud VMs, never the host.
   Full filesystem access (`read_file`/`write_file`/`edit_file`/`list_files`/
   `delete_file`/`file_stat`) plus shell command execution
@@ -106,6 +108,7 @@ local database named `gorkie`. Mastra auto-creates its tables on first run.
 |---|---|---|
 | `SLACK_BOT_TOKEN` | yes | Bot User OAuth token (`xoxb-…`) |
 | `SLACK_APP_TOKEN` | yes | App-level token with `connections:write` (`xapp-…`) |
+| `OPT_IN_CHANNEL` | no | Slack channel id gating access to members only (opt-in allowlist); unset means everyone is allowed |
 | `HACKCLUB_API_KEY` | yes | Hack Club AI proxy key, a gateway rung for every model |
 | `OPENCODE_API_KEY` | yes | opencode.ai/zen gateway key, tried alongside Hack Club |
 | `DATABASE_URL` | yes | Postgres connection string |
