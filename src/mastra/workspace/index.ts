@@ -12,6 +12,17 @@ import { sandbox as config } from '../config';
 import { channelContext } from '../lib/context';
 import { E2BFilesystem } from './filesystem';
 import { createSandbox } from './sandbox';
+import {
+  DELETE_FILE,
+  EDIT_FILE,
+  EXECUTE_COMMAND,
+  FILE_STAT,
+  GET_PROCESS_OUTPUT,
+  KILL_PROCESS,
+  LIST_FILES,
+  READ_FILE,
+  WRITE_FILE,
+} from './tool-names';
 
 export async function getSandbox(
   requestContext: RequestContext
@@ -19,6 +30,8 @@ export async function getSandbox(
   const sandbox = await workspace.resolveSandbox({ requestContext });
   return sandbox instanceof E2BSandbox ? sandbox : undefined;
 }
+
+export { codeModeToolNames, workspaceToolNames } from './tool-names';
 
 export const workspace: Workspace = new Workspace({
   id: 'main-workspace',
@@ -56,26 +69,26 @@ export const workspace: Workspace = new Workspace({
   }),
   skills: ['.'],
   tools: {
-    [WORKSPACE_TOOLS.FILESYSTEM.READ_FILE]: { name: 'read_file' },
+    [WORKSPACE_TOOLS.FILESYSTEM.READ_FILE]: { name: READ_FILE },
     [WORKSPACE_TOOLS.FILESYSTEM.WRITE_FILE]: {
-      name: 'write_file',
+      name: WRITE_FILE,
       requireReadBeforeWrite: true,
     },
     [WORKSPACE_TOOLS.FILESYSTEM.EDIT_FILE]: {
-      name: 'edit_file',
+      name: EDIT_FILE,
       requireReadBeforeWrite: true,
     },
-    [WORKSPACE_TOOLS.FILESYSTEM.LIST_FILES]: { name: 'list_files' },
-    [WORKSPACE_TOOLS.FILESYSTEM.DELETE]: { name: 'delete_file' },
-    [WORKSPACE_TOOLS.FILESYSTEM.FILE_STAT]: { name: 'file_stat' },
+    [WORKSPACE_TOOLS.FILESYSTEM.LIST_FILES]: { name: LIST_FILES },
+    [WORKSPACE_TOOLS.FILESYSTEM.DELETE]: { name: DELETE_FILE },
+    [WORKSPACE_TOOLS.FILESYSTEM.FILE_STAT]: { name: FILE_STAT },
     [WORKSPACE_TOOLS.FILESYSTEM.MKDIR]: { enabled: false },
     // The network-bound built-in grep hangs on large trees; use the ripgrep tool instead.
     [WORKSPACE_TOOLS.FILESYSTEM.GREP]: { enabled: false },
     [WORKSPACE_TOOLS.FILESYSTEM.AST_EDIT]: { enabled: false },
-    [WORKSPACE_TOOLS.SANDBOX.EXECUTE_COMMAND]: { name: 'execute_command' },
+    [WORKSPACE_TOOLS.SANDBOX.EXECUTE_COMMAND]: { name: EXECUTE_COMMAND },
     [WORKSPACE_TOOLS.SANDBOX.GET_PROCESS_OUTPUT]: {
-      name: 'get_process_output',
+      name: GET_PROCESS_OUTPUT,
     },
-    [WORKSPACE_TOOLS.SANDBOX.KILL_PROCESS]: { name: 'kill_process' },
+    [WORKSPACE_TOOLS.SANDBOX.KILL_PROCESS]: { name: KILL_PROCESS },
   },
 });

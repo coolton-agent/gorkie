@@ -23,12 +23,6 @@ export const generateImageTool = createTool({
       .max(4)
       .default(1)
       .describe('How many images to generate.'),
-    aspectRatio: z
-      .custom<`${number}:${number}`>(
-        (value) => typeof value === 'string' && /^\d+:\d+$/.test(value)
-      )
-      .optional()
-      .describe('Optional aspect ratio like 16:9 or 1:1.'),
   }),
   outputSchema: output({
     prompt: z.string(),
@@ -41,7 +35,7 @@ export const generateImageTool = createTool({
       }),
     },
   },
-  execute: async ({ prompt, n, aspectRatio }, context) => {
+  execute: async ({ prompt, n }, context) => {
     if (!context?.requestContext) {
       throw new Error('No workspace context.');
     }
@@ -50,12 +44,7 @@ export const generateImageTool = createTool({
       throw new Error('No sandbox available.');
     }
 
-    const result = await generateImage({
-      model: images,
-      prompt,
-      n,
-      ...(aspectRatio ? { aspectRatio } : {}),
-    });
+    const result = await generateImage({ model: images, prompt, n });
 
     await sandbox.ensureRunning();
     const dir = p('downloads');

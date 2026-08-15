@@ -1,7 +1,9 @@
 import type { Message } from 'chat';
 import { slack } from '../../chat/client';
 import { chat } from '../../chat/instance';
+import type { Target } from '../../chat/target';
 import { chatChannelId, rawId } from '../../lib/ids';
+import type { ChannelContext } from '../../types';
 
 export async function assertReadableChannel({
   channelId,
@@ -23,6 +25,37 @@ export async function assertReadableChannel({
   throw new Error(
     'Reading DMs, private channels, or external conversations is not allowed.'
   );
+}
+
+export function assertCanPostTo({
+  target,
+  ctx,
+}: {
+  target: Target;
+  ctx: ChannelContext;
+}): void {
+  if (target.type === 'user') {
+    if (!ctx.userId || rawId(target.id) !== rawId(ctx.userId)) {
+      throw new Error(
+        'gorkie can only DM the person currently asking, not a third party on their behalf. Ask that person to message gorkie directly instead.'
+      );
+    }
+    return;
+  }
+  if (!ctx.channelId) {
+    throw new Error(
+      'No current channel to compare against, so gorkie will not post there.'
+    );
+  }
+  const targetChannelId =
+    target.type === 'channel'
+      ? target.id
+      : slack.channelIdFromThreadId(target.id);
+  if (chatChannelId(targetChannelId) !== chatChannelId(ctx.channelId)) {
+    throw new Error(
+      'gorkie can only post to the channel this conversation is already in, not a different channel. Ask a member of that channel to post it there.'
+    );
+  }
 }
 
 export async function joinChannel(channelId: string): Promise<void> {

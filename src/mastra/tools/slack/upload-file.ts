@@ -4,12 +4,12 @@ import { resolveTarget, targetSchema } from '../../chat/target';
 import { channelContext } from '../../lib/context';
 import { input, output } from '../../types/tools/index';
 import { getSandbox } from '../../workspace';
-import { joinChannel } from './utils';
+import { assertCanPostTo, joinChannel } from './utils';
 
 export const uploadFileTool = createTool({
   id: 'upload_file',
   description:
-    'Upload a file from the sandbox to any Slack destination the bot can access. Defaults to the current thread; pass target to send it elsewhere.',
+    'Upload a file from the sandbox to Slack. Defaults to the current thread; pass target to send it elsewhere. Channel and thread targets must be in the channel this conversation is already in; user targets must be the requester themselves.',
   inputSchema: input({
     path: z
       .string()
@@ -65,6 +65,7 @@ export const uploadFileTool = createTool({
     if (!resolved) {
       throw new Error('No current thread to upload to.');
     }
+    assertCanPostTo({ target: resolved, ctx });
     if (resolved.type !== 'user') {
       await joinChannel(resolved.id);
     }

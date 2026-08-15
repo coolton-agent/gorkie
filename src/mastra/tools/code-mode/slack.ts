@@ -6,7 +6,7 @@ import { E2BCodeModeTransport } from '@mastra/e2b';
 import { sandbox as sandboxConfig } from '../../config';
 import { mcpTools } from '../../mcp';
 import { codeModeFilesPrompt, codeModePrompt } from '../../prompts/code-mode';
-import { getSandbox, workspace } from '../../workspace';
+import { codeModeToolNames, getSandbox, workspace } from '../../workspace';
 import { canvasTools } from '../canvas';
 import { grepTool } from '../grep';
 import { slackTools } from '../slack';
@@ -30,16 +30,6 @@ const slackCodeTools = {
   lookup_canvas_sections: canvasTools.lookup_canvas_sections,
 };
 
-const sandboxToolNames = new Set([
-  'read_file',
-  'write_file',
-  'edit_file',
-  'list_files',
-  'file_stat',
-  'delete_file',
-  'execute_command',
-]);
-
 // Built per request, not once at module load: each set carries its own
 // read-before-write tracker and write lock, and sharing those across threads
 // would let one thread's sandbox satisfy or stale-fail another's writes.
@@ -52,7 +42,7 @@ async function getSandboxTools(
   });
   return {
     ...Object.fromEntries(
-      Object.entries(tools).filter(([name]) => sandboxToolNames.has(name))
+      Object.entries(tools).filter(([name]) => codeModeToolNames.has(name))
     ),
     grep: grepTool,
   };

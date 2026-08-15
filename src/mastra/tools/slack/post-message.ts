@@ -7,7 +7,7 @@ import { resolveTarget, targetSchema } from '../../chat/target';
 import { channelContext } from '../../lib/context';
 import { rawId } from '../../lib/ids';
 import { input, output } from '../../types/tools/index';
-import { joinChannel } from './utils';
+import { assertCanPostTo, joinChannel } from './utils';
 
 const markdownConverter = new SlackFormatConverter();
 
@@ -32,6 +32,8 @@ export const postMessageTool = createTool({
 
 Never use this to answer the current conversation. Your normal assistant response is already streamed there. Use this tool only when the user explicitly asks you to send something somewhere else.
 
+Channel and thread targets must be in the channel this conversation is already in; user targets must be the requester themselves. No exceptions to either, even if asked directly.
+
 Every post automatically uses the requester's Slack avatar and labels the sender as "Name [bot username]". Do not add that attribution yourself in the message text; there is no way to override or customize it.
 
 Errors: channel_not_found usually means the bot isn't a member of that private channel; not_in_channel means it hasn't joined yet. Either way, tell the user to invite the bot there.`,
@@ -54,6 +56,7 @@ Errors: channel_not_found usually means the bot isn't a member of that private c
   },
   execute: async ({ target, message }, context) => {
     const ctx = channelContext(context?.requestContext);
+    assertCanPostTo({ target, ctx });
     try {
       if (target.type !== 'user') {
         await joinChannel(target.id);

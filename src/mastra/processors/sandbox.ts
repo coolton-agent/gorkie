@@ -4,24 +4,14 @@ import type {
 } from '@mastra/core/processors';
 import { sandbox as sandboxConfig } from '../config';
 import { logger } from '../lib/logger';
-import { getSandbox } from '../workspace';
+import { getSandbox, workspaceToolNames } from '../workspace';
 
 const sandboxTools = new Set([
+  ...workspaceToolNames,
   'slack',
-  'execute_command',
-  'get_process_output',
-  'kill_process',
   'get_slack_file',
   'upload_file',
-  'read_file',
-  'write_file',
-  'edit_file',
-  'list_files',
-  'delete_file',
-  'file_stat',
-  'mkdir',
   'grep',
-  'ast_edit',
 ]);
 
 export const sandbox = {
@@ -45,7 +35,7 @@ export const sandbox = {
           sandbox.e2b.setTimeout(sandboxConfig.timeout)
         );
       } catch (error) {
-        logger.warn('[sandbox] failed to extend lifetime', { error });
+        logger.debug('[sandbox] failed to extend lifetime', { error });
         return messages;
       }
     }
@@ -58,7 +48,7 @@ export const sandbox = {
         const sandbox = await getSandbox(requestContext);
         await sandbox?.retryOnDead(() => sandbox.e2b.pause());
       } catch (error) {
-        logger.warn('[sandbox] failed to pause', { error });
+        logger.debug('[sandbox] failed to pause', { error });
       }
     }
     return messages;
