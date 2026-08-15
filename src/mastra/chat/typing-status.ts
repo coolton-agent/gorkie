@@ -6,7 +6,7 @@ import { label } from '../lib/label';
 
 type Args = Record<string, unknown>;
 
-function truncate(text: string, max = 50): string {
+function truncate(text: string, max: number): string {
   const flat = text.replace(/\s+/g, ' ').trim();
   return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
 }
@@ -20,116 +20,106 @@ function fileName(path: string): string {
   return path.split('/').filter(Boolean).at(-1) ?? path;
 }
 
-// Fallback per tool when args are missing or a dynamic describer below
-// declines to produce a string (e.g. an optional field wasn't passed).
-const toolStatuses: Record<string, string> = {
-  create_canvas: 'is creating a canvas...',
-  create_scheduled_task: 'is scheduling a task...',
-  delete_file: 'is deleting a file...',
-  delete_scheduled_task: 'is deleting a scheduled task...',
-  edit_canvas: 'is editing a canvas...',
-  edit_file: 'is editing a file...',
-  execute_command: 'is running a command...',
-  fetch_url: 'is reading a web page...',
-  file_stat: 'is checking a file...',
-  generate_image: 'is generating an image...',
-  get_channel_info: 'is checking a channel...',
-  get_permalink: 'is getting a Slack link...',
-  get_process_output: 'is checking a process...',
-  get_slack_file: 'is downloading a Slack file...',
-  get_user: 'is looking up a user...',
-  grep: 'is searching files...',
-  kill_process: 'is stopping a process...',
-  leave_thread: 'is leaving the thread...',
-  list_canvases: 'is listing canvases...',
-  list_channels: 'is listing channels...',
-  list_files: 'is listing files...',
-  list_scheduled_tasks: 'is checking scheduled tasks...',
-  list_threads: 'is listing threads...',
-  lookup_canvas_sections: 'is inspecting a canvas...',
-  pause_scheduled_task: 'is pausing a scheduled task...',
-  post_message: 'is sending a message...',
-  react: 'is adding a reaction...',
-  read_canvas: 'is reading a canvas...',
-  read_conversation_history: 'is reading Slack history...',
-  read_file: 'is reading a file...',
-  resume_scheduled_task: 'is resuming a scheduled task...',
-  search_slack: 'is searching Slack...',
-  search_web: 'is searching the web...',
-  slack: 'is working in Slack...',
-  summarize_thread: 'is summarizing the thread...',
-  upload_file: 'is uploading a file...',
-  wait: 'is waiting...',
-  write_file: 'is writing a file...',
-};
-
-// Builds a status line from the tool's actual input when it has one
-// meaningful, human-readable field. Return undefined to fall back to
-// toolStatuses above instead of guessing.
-const dynamicStatuses: Record<string, (args: Args) => string | undefined> = {
+const statuses: Record<string, (args: Args) => string> = {
   create_canvas: (args) => {
     const title = str(args, 'title');
-    return title && `is creating the canvas "${truncate(title, 40)}"...`;
+    return title
+      ? `is creating the canvas "${truncate(title, 20)}"...`
+      : 'is creating a canvas...';
   },
   create_scheduled_task: (args) => {
     const name = str(args, 'name') ?? str(args, 'task');
-    return name && `is scheduling "${truncate(name, 40)}"...`;
+    return name
+      ? `is scheduling "${truncate(name, 30)}"...`
+      : 'is scheduling a task...';
   },
   delete_file: (args) => {
     const path = str(args, 'path');
-    return path && `is deleting ${fileName(path)}...`;
+    return path
+      ? `is deleting ${truncate(fileName(path), 30)}...`
+      : 'is deleting a file...';
   },
+  delete_scheduled_task: () => 'is deleting a scheduled task...',
+  edit_canvas: () => 'is editing a canvas...',
   edit_file: (args) => {
     const path = str(args, 'path');
-    return path && `is editing ${fileName(path)}...`;
+    return path
+      ? `is editing ${truncate(fileName(path), 30)}...`
+      : 'is editing a file...';
   },
   execute_command: (args) => {
     const command = str(args, 'command');
-    return command && `is running \`${truncate(command, 60)}\`...`;
+    return command
+      ? `is running \`${truncate(command, 28)}\`...`
+      : 'is running a command...';
   },
   fetch_url: (args) => {
     const url = str(args, 'url');
-    if (!url) {
-      return;
-    }
     try {
-      return `is reading ${new URL(url).hostname}...`;
+      return url
+        ? `is reading ${new URL(url).hostname}...`
+        : 'is reading a web page...';
     } catch {
-      // Not a parseable URL; fall back to toolStatuses.
+      return 'is reading a web page...';
     }
   },
   file_stat: (args) => {
     const path = str(args, 'path');
-    return path && `is checking ${fileName(path)}...`;
+    return path
+      ? `is checking ${truncate(fileName(path), 30)}...`
+      : 'is checking a file...';
   },
   generate_image: (args) => {
     const prompt = str(args, 'prompt');
-    return prompt && `is generating an image of "${truncate(prompt, 40)}"...`;
+    return prompt
+      ? `is generating an image of "${truncate(prompt, 15)}"...`
+      : 'is generating an image...';
   },
+  get_channel_info: () => 'is checking a channel...',
+  get_permalink: () => 'is getting a Slack link...',
   get_process_output: (args) => {
     const pid = str(args, 'pid');
-    return pid && `is checking process ${pid}...`;
+    return pid
+      ? `is checking process ${truncate(pid, 15)}...`
+      : 'is checking a process...';
   },
+  get_slack_file: () => 'is downloading a Slack file...',
+  get_user: () => 'is looking up a user...',
   grep: (args) => {
     const pattern = str(args, 'pattern');
-    return pattern && `is searching files for "${truncate(pattern, 40)}"...`;
+    return pattern
+      ? `is searching files for "${truncate(pattern, 15)}"...`
+      : 'is searching files...';
   },
   kill_process: (args) => {
     const pid = str(args, 'pid');
-    return pid && `is stopping process ${pid}...`;
+    return pid
+      ? `is stopping process ${truncate(pid, 15)}...`
+      : 'is stopping a process...';
   },
+  leave_thread: () => 'is leaving the thread...',
   list_canvases: (args) => {
     const query = str(args, 'query');
-    return query && `is listing canvases matching "${truncate(query, 40)}"...`;
+    return query
+      ? `is listing canvases: "${truncate(query, 18)}"...`
+      : 'is listing canvases...';
   },
   list_channels: (args) => {
     const query = str(args, 'query');
-    return query && `is listing channels matching "${truncate(query, 40)}"...`;
+    return query
+      ? `is listing channels: "${truncate(query, 18)}"...`
+      : 'is listing channels...';
   },
   list_files: (args) => {
     const path = str(args, 'path');
-    return path && path !== '.' ? `is listing ${fileName(path)}...` : undefined;
+    return path && path !== '.'
+      ? `is listing ${truncate(fileName(path), 30)}...`
+      : 'is listing files...';
   },
+  list_scheduled_tasks: () => 'is checking scheduled tasks...',
+  list_threads: () => 'is listing threads...',
+  lookup_canvas_sections: () => 'is inspecting a canvas...',
+  pause_scheduled_task: () => 'is pausing a scheduled task...',
   post_message: (args) => {
     const target = args.target as { type?: string } | undefined;
     if (target?.type === 'user') {
@@ -138,39 +128,55 @@ const dynamicStatuses: Record<string, (args: Args) => string | undefined> = {
     if (target?.type === 'channel' || target?.type === 'thread') {
       return `is sending a message to the ${target.type}...`;
     }
+    return 'is sending a message...';
   },
   react: (args) => {
     const emoji = str(args, 'emoji');
     if (!emoji) {
-      return;
+      return 'is adding a reaction...';
     }
     return args.action === 'remove'
       ? `is removing a :${emoji}: reaction...`
       : `is adding a :${emoji}: reaction...`;
   },
+  read_canvas: () => 'is reading a canvas...',
+  read_conversation_history: () => 'is reading Slack history...',
   read_file: (args) => {
     const path = str(args, 'path');
-    return path && `is reading ${fileName(path)}...`;
+    return path
+      ? `is reading ${truncate(fileName(path), 30)}...`
+      : 'is reading a file...';
   },
+  resume_scheduled_task: () => 'is resuming a scheduled task...',
   search_slack: (args) => {
     const query = str(args, 'query');
-    return query && `is searching Slack for "${truncate(query, 40)}"...`;
+    return query
+      ? `is searching Slack for "${truncate(query, 15)}"...`
+      : 'is searching Slack...';
   },
   search_web: (args) => {
     const query = str(args, 'query');
-    return query && `is searching the web for "${truncate(query, 40)}"...`;
+    return query
+      ? `is searching the web for "${truncate(query, 12)}"...`
+      : 'is searching the web...';
   },
+  slack: () => 'is working in Slack...',
   summarize_thread: (args) => {
     const instructions = str(args, 'instructions');
-    return instructions && `is summarizing: ${truncate(instructions, 45)}...`;
+    return instructions
+      ? `is summarizing: ${truncate(instructions, 25)}`
+      : 'is summarizing the thread...';
   },
+  upload_file: () => 'is uploading a file...',
   wait: (args) => {
     const reason = str(args, 'reason');
-    return reason && `is waiting: ${truncate(reason, 45)}...`;
+    return reason ? `is waiting: ${truncate(reason, 30)}` : 'is waiting...';
   },
   write_file: (args) => {
     const path = str(args, 'path');
-    return path && `is writing ${fileName(path)}...`;
+    return path
+      ? `is writing ${truncate(fileName(path), 30)}...`
+      : 'is writing a file...';
   },
 };
 
@@ -183,15 +189,14 @@ export const typingStatus: TypingStatusFn = (chunk, context) => {
   if (context.channelTools.has(toolName)) {
     return false;
   }
-  if (toolName.startsWith('agent-')) {
-    return `is spawning a ${label(toolName.slice(6))} agent...`;
-  }
 
-  const args = chunk.payload.args as Args | undefined;
-  const dynamic = args && dynamicStatuses[toolName]?.(args);
-  return (
-    dynamic ||
-    toolStatuses[toolName] ||
-    `is using ${label(toolName).toLowerCase()}...`
-  );
+  const args = (chunk.payload.args as Args | undefined) ?? {};
+  const status = toolName.startsWith('agent-')
+    ? `is spawning a ${label(toolName.slice(6))} agent...`
+    : (statuses[toolName]?.(args) ??
+      `is using ${label(toolName).toLowerCase()}...`);
+
+  // Slack's assistant.threads.setStatus rejects loading_messages entries of
+  // 51+ characters.
+  return truncate(status, 50);
 };

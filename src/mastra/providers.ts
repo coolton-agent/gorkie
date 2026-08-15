@@ -28,14 +28,10 @@ export const orchestrator: ModelWithRetries[] = [
   { model: opencode('gpt-5.6-luna'), maxRetries: 3 },
 ];
 
-// mimo-v2-omni stands in for gemini-flash-lite; OpenCode Go has no Google models.
 export const summarizer: ModelWithRetries[] = [
   { model: hackclub('google/gemini-3.5-flash-lite'), maxRetries: 3 },
   { model: hackclub('xiaomi/mimo-v2.5'), maxRetries: 3 },
-  { model: hackclub('minimax/minimax-m3'), maxRetries: 3 },
-  { model: opencode('mimo-v2-omni'), maxRetries: 3 },
   { model: opencode('mimo-v2.5'), maxRetries: 3 },
-  { model: opencode('minimax-m3'), maxRetries: 3 },
 ];
 
 export const scout: ModelWithRetries[] = [
