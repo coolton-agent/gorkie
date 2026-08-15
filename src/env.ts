@@ -10,14 +10,9 @@ export const env = createEnv({
 
     SLACK_BOT_TOKEN: z.string().min(1),
     SLACK_APP_TOKEN: z.string().min(1),
-    OPT_IN_CHANNEL: z.string().optional(),
 
     HACKCLUB_API_KEY: z.string().min(1),
-
-    OPENROUTER_API_KEY: z.string().min(1).optional(),
-    OPENROUTER_BASE_URL: z.url().default('https://openrouter.ai/api/v1'),
-
-    OPENCODE_API_KEY: z.string().min(1).optional(),
+    OPENCODE_API_KEY: z.string().min(1),
 
     DATABASE_URL: z.url(),
 
@@ -27,9 +22,6 @@ export const env = createEnv({
 
     AGENTMAIL_API_KEY: z.string().min(1).optional(),
     GITHUB_TOKEN: z.string().min(1).optional(),
-
-    MASTRA_PLATFORM_ACCESS_TOKEN: z.string().min(1),
-    MASTRA_PROJECT_ID: z.string().min(1),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

@@ -1,18 +1,17 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
+import { input } from '../types/tools/index';
 
 export const skipTool = createTool({
   id: 'skip',
   description:
-    'End the turn without replying. Use when the message needs no response from you, for example when it is not addressed to you, is a side conversation between other people, or someone is showing your output to a third party. Prefer this over writing a bracketed status note or a filler acknowledgement.',
-  inputSchema: z.object({
+    'End this turn silently when no response is needed. Call this tool by itself with no streamed text and no other tool calls.',
+  inputSchema: input({
     reason: z
       .string()
       .optional()
       .describe('Optional short reason for skipping.'),
   }),
-  execute: async () => ({
-    success: true,
-    message: 'Skipped',
-  }),
+  transform: { display: { output: () => ({ summary: 'Skipped' }) } },
+  execute: async () => ({}),
 });

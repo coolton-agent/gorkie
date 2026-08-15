@@ -1,64 +1,49 @@
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import type { LanguageModelV4 } from '@ai-sdk/provider';
 import type { ModelWithRetries } from '@mastra/core/agent';
 import { env } from '@/env';
 
-type ModelConfig = ModelWithRetries['model'] & { id: `${string}/${string}` };
+const hackClubProvider = createOpenAICompatible({
+  name: 'hackclub',
+  baseURL: 'https://ai.hackclub.com/proxy/v1',
+  apiKey: env.HACKCLUB_API_KEY,
+});
 
-function gateways(id: `${string}/${string}`): ModelConfig[] {
-  return [
-    {
-      id,
-      apiKey: env.HACKCLUB_API_KEY,
-      url: 'https://ai.hackclub.com/proxy/v1',
-    },
-    { id, apiKey: env.OPENROUTER_API_KEY, url: env.OPENROUTER_BASE_URL },
-  ];
+function hackclub(model: string): LanguageModelV4 {
+  return hackClubProvider.chatModel(model);
 }
 
-function opencode(id: `${string}/${string}`): ModelConfig {
-  return {
-    id,
-    apiKey: env.OPENCODE_API_KEY,
-    url: 'https://opencode.ai/zen/go/v1',
-  };
+const openCodeProvider = createOpenAICompatible({
+  name: 'opencode-go',
+  baseURL: 'https://opencode.ai/zen/go/v1',
+  apiKey: env.OPENCODE_API_KEY,
+});
+
+function opencode(model: string): LanguageModelV4 {
+  return openCodeProvider.chatModel(model);
 }
 
 export const orchestrator: ModelWithRetries[] = [
-  ...gateways('openrouter/minimax/minimax-m3').map((model) => ({
-    model,
-    maxRetries: 3,
-    providerOptions: {
-      openrouter: { reasoningEffort: 'medium' },
-    },
-  })),
-  { model: opencode('opencode-go/minimax-m3'), maxRetries: 3 },
+  { model: hackclub('openai/gpt-5.6-luna'), maxRetries: 3 },
+  { model: opencode('gpt-5.6-luna'), maxRetries: 3 },
 ];
 
+// mimo-v2-omni stands in for gemini-flash-lite; OpenCode Go has no Google models.
 export const summarizer: ModelWithRetries[] = [
-  ...gateways('openrouter/google/gemini-3.1-flash-lite').map((model) => ({
-    model,
-    maxRetries: 3,
-  })),
-  { model: opencode('opencode-go/mimo-v2.5'), maxRetries: 3 },
+  { model: hackclub('google/gemini-3.5-flash-lite'), maxRetries: 3 },
+  { model: hackclub('xiaomi/mimo-v2.5'), maxRetries: 3 },
+  { model: hackclub('minimax/minimax-m3'), maxRetries: 3 },
+  { model: opencode('mimo-v2-omni'), maxRetries: 3 },
+  { model: opencode('mimo-v2.5'), maxRetries: 3 },
+  { model: opencode('minimax-m3'), maxRetries: 3 },
 ];
 
 export const scout: ModelWithRetries[] = [
-  ...gateways('openrouter/deepseek/deepseek-v4-flash').map((model) => ({
-    model,
-    maxRetries: 3,
-  })),
-  { model: opencode('opencode-go/deepseek-v4-flash'), maxRetries: 3 },
+  { model: hackclub('openai/gpt-5.6-luna'), maxRetries: 3 },
+  { model: opencode('gpt-5.6-luna'), maxRetries: 3 },
 ];
 
 export const explorer: ModelWithRetries[] = [
-  ...gateways('openrouter/minimax/minimax-m3').map((model) => ({
-    model,
-    maxRetries: 3,
-  })),
-  { model: opencode('opencode-go/minimax-m3'), maxRetries: 3 },
+  { model: hackclub('openai/gpt-5.6-luna'), maxRetries: 3 },
+  { model: opencode('gpt-5.6-luna'), maxRetries: 3 },
 ];
-
-export const images = {
-  id: 'google/gemini-3.1-flash-image',
-  apiKey: env.HACKCLUB_API_KEY,
-  url: 'https://ai.hackclub.com/proxy/v1',
-};
