@@ -68,9 +68,12 @@ Errors: channel_not_found usually means the bot isn't a member of that private c
             .catch(() => null)
         : null;
       const requester = requesterUser?.userName ?? ctx.userName;
-      const username = requester
-        ? `${requester} [${ctx.botUserName ?? 'gorkie'}]`
-        : (ctx.botUserName ?? 'gorkie');
+      // A user target is always the requester DMing themselves (see
+      // assertCanPostTo), so crediting them by name is redundant there.
+      const username =
+        requester && target.type !== 'user'
+          ? `${requester} [${ctx.botUserName ?? 'gorkie'}]`
+          : (ctx.botUserName ?? 'gorkie');
       const sent = await slack.webClient.chat.postMessage({
         channel,
         ...(threadTs ? { thread_ts: threadTs } : {}),
