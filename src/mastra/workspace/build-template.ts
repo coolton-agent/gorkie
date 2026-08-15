@@ -54,8 +54,8 @@ async function main(): Promise<void> {
         'ln -sf /usr/bin/node /usr/local/bin/node && ln -sf /usr/bin/npm /usr/local/bin/npm && ln -sf /usr/bin/npx /usr/local/bin/npx',
         'npm config --global set prefix /usr/local',
         'python3 -m pip install --no-cache-dir --break-system-packages --no-user --upgrade pip',
-        'python3 -m pip install --no-cache-dir --break-system-packages --no-user pillow matplotlib numpy pandas requests agentmail',
-        'npm install -g agent-browser',
+        'python3 -m pip install --no-cache-dir --break-system-packages --no-user pillow matplotlib numpy pandas requests agentmail gTTS SpeechRecognition pydub',
+        'npm install -g agent-browser wrangler',
         'bash -lc "yes | agent-browser install --with-deps"',
         'python3 -m pip install --no-cache-dir --break-system-packages --no-user cloakbrowser',
         // Wrap agent-browser: its stealth env vars are resolved dynamically, not
