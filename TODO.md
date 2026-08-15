@@ -31,3 +31,4 @@ Keep this file limited to unresolved work that belongs in the reusable template.
 - [ ] Handle changing Slack Canvas export sizes in `get_slack_file`.
 - [ ] Ensure image input skips model routes that do not support vision.
 - [ ] Replace the temporary Mastra media token-count patch when the fix ships upstream.
+- [ ] Refactor `tools/slack/call-api.ts` and the Slack code mode tool (`tools/code-mode/slack.ts`); the overlap between raw Slack Web API access and the wrapped Slack tools needs a cleaner boundary.

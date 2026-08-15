@@ -77,12 +77,6 @@ const orchestrator = new Agent({
     research: researchAgent,
     explore: exploreAgent,
   },
-  backgroundTasks: {
-    tools: {
-      research: { defaultEnabled: false, enabled: true },
-      explore: { defaultEnabled: false, enabled: true },
-    },
-  },
   memory: new Memory({
     options: {
       lastMessages: 20,

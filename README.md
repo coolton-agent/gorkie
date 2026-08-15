@@ -114,8 +114,8 @@ local database named `gorkie`. Mastra auto-creates its tables on first run.
 | `DATABASE_URL` | yes | Postgres connection string |
 | `E2B_API_KEY` | yes | E2B sandbox key (`e2b_…`) |
 | `EXA_API_KEY` | yes | Exa key, powers `search_web`/`fetch_url` |
-| `AGENTMAIL_API_KEY` | no | Broker AgentMail API access into sandbox egress |
-| `GITHUB_TOKEN` | no | Broker GitHub API access into sandbox egress |
+| `AGENTMAIL_API_KEY` | no | Broker AgentMail API access into sandbox egress for `gorkie@agentmail.to` |
+| `GITHUB_TOKEN` | no | Broker GitHub API access into sandbox egress for the `gorkie-agent` account |
 
 See [`.env.example`](./.env.example) for the full annotated list.
 

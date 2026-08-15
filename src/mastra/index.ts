@@ -56,7 +56,7 @@ export const mastra = new Mastra({
   observability: new Observability({
     configs: {
       default: {
-        serviceName: 'gorkie',
+        serviceName: 'orchestrator',
         exporters: [new MastraStorageExporter()],
         spanOutputProcessors: [new SensitiveDataFilter()],
       },
@@ -78,8 +78,8 @@ orchestrator
     setChat(sdk);
     registerEvents();
     await buildAllowlist();
-    logger.info('[gorkie] online');
+    logger.info('[agent] online');
   })
   .catch((err: unknown) =>
-    logger.error('[gorkie] initialization failed', { err })
+    logger.error('[agent] initialization failed', { err })
   );

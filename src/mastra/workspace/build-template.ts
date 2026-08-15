@@ -68,6 +68,10 @@ async function main(): Promise<void> {
         mode: 0o755,
       })
       .setUser('user')
+      .runCmd([
+        'git config --global user.name gorkie-agent',
+        'git config --global user.email gorkie@agentmail.to',
+      ])
       .setWorkdir(config.workdir),
     config.template,
     {

@@ -10,7 +10,7 @@ from agentmail import AgentMail, MessageReceivedEvent, Subscribe, Subscribed
 client = AgentMail(api_key="brokered")
 
 with client.websockets.connect() as socket:
-    socket.send_subscribe(Subscribe(inbox_ids=["your-inbox@agentmail.to"]))
+    socket.send_subscribe(Subscribe(inbox_ids=["gorkie@agentmail.to"]))
 
     for event in socket:
         if isinstance(event, Subscribed):
@@ -31,7 +31,7 @@ client = AsyncAgentMail(api_key="brokered")
 async def main():
     async with client.websockets.connect() as socket:
         await socket.send_subscribe(
-            Subscribe(inbox_ids=["your-inbox@agentmail.to"])
+            Subscribe(inbox_ids=["gorkie@agentmail.to"])
         )
 
         async for event in socket:
@@ -46,10 +46,10 @@ asyncio.run(main())
 ```python
 from agentmail import Subscribe
 
-Subscribe(inbox_ids=["your-inbox@agentmail.to"])
+Subscribe(inbox_ids=["gorkie@agentmail.to"])
 Subscribe(pod_ids=["pod_123"])
 Subscribe(
-    inbox_ids=["your-inbox@agentmail.to"],
+    inbox_ids=["gorkie@agentmail.to"],
     event_types=["message.received", "message.sent"],
 )
 ```
@@ -97,7 +97,7 @@ async def main():
     try:
         async with client.websockets.connect() as socket:
             await socket.send_subscribe(
-                Subscribe(inbox_ids=["your-inbox@agentmail.to"])
+                Subscribe(inbox_ids=["gorkie@agentmail.to"])
             )
             async for event in socket:
                 if isinstance(event, MessageReceivedEvent):
