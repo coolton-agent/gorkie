@@ -28,13 +28,6 @@ process.on('uncaughtException', (err: Error) => {
 
 export const mastra = new Mastra({
   agents: { orchestrator, summarizer, research, explore },
-  backgroundTasks: {
-    enabled: true,
-    globalConcurrency: 6,
-    perAgentConcurrency: 4,
-    backpressure: 'queue',
-    defaultTimeoutMs: 900_000,
-  },
   schedules: {
     prepare: async ({ mastra: runtime, schedule }) => {
       const current = await runtime.schedules.get(schedule.id);
@@ -70,7 +63,8 @@ export const mastra = new Mastra({
   logger,
 });
 
-await Promise.all([mastra.startWorkers(), createTables()]);
+await createTables();
+await mastra.startWorkers();
 setMastra(mastra);
 
 orchestrator

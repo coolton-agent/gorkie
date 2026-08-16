@@ -21,11 +21,11 @@ export async function createUserSettingsTable(): Promise<void> {
     .execute();
 
   // Older deploys had a jsonb `settings` blob instead of a plain
-  // `instructions` column; both sides are idempotent so this is safe
-  // to run every boot regardless of which shape the table already has.
+  // `instructions` column; adding the new column is idempotent, but the
+  // old column is only dropped once migrateLegacySettingsColumn (db/index.ts)
+  // has backfilled its data, so it runs after both tables exist.
   await db.schema
     .alterTable('user_settings')
     .addColumn('instructions', 'text', (col) => col.ifNotExists())
-    .dropColumn('settings', (col) => col.ifExists())
     .execute();
 }

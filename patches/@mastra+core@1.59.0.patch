@@ -1,5 +1,5 @@
 diff --git a/dist/agent-BOdDHE12.cjs b/dist/agent-BOdDHE12.cjs
-index 6c7efc0..1e979d3 100644
+index 6c7efc0..ea7ab03 100644
 --- a/dist/agent-BOdDHE12.cjs
 +++ b/dist/agent-BOdDHE12.cjs
 @@ -13129,11 +13129,23 @@ var TokenLimiterProcessor = class TokenLimiterProcessor {
@@ -26,8 +26,92 @@ index 6c7efc0..1e979d3 100644
  			} else tokenString += JSON.stringify(part);
  		}
  		overhead += TokenLimiterProcessor.TOKENS_PER_MESSAGE;
+@@ -24662,7 +24674,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 							...options,
+ 							messageId: currentMessageId
+ 						}) } : void 0;
+-						if ((await processorRunner.runProcessAPIError({
++						const syncErrorResult = await processorRunner.runProcessAPIError({
+ 							error,
+ 							messages: messageList.get.all.db(),
+ 							messageList,
+@@ -24679,7 +24691,8 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 								outputStream.messageId = currentMessageId;
+ 								return currentMessageId;
+ 							}
+-						})).retry && canRetryError) {
++						});
++						if (syncErrorResult.retry && canRetryError) {
+ 							runState.setState({
+ 								hasErrored: false,
+ 								apiError: void 0
+@@ -24693,6 +24706,24 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 								processAPIErrorRetry: { retry: true }
+ 							};
+ 						}
++						// Retries on this model are exhausted (or the processor declined). Before
++						// giving up entirely, fall through to the next fallback model instead of
++						// throwing, so a model that errors here (not just one that fails to start)
++						// still gets a chance at the rest of the fallback array.
++						if (activeFallbackModelIndex + 1 < models.length) {
++							runState.setState({
++								hasErrored: false,
++								apiError: void 0
++							});
++							return {
++								outputStream,
++								callBail: false,
++								runState,
++								stepTools: currentStep.tools,
++								stepWorkspace: currentStep.workspace,
++								processAPIErrorRetry: { retry: true, advanceFallbackModel: true }
++							};
++						}
+ 						throw error;
+ 					}
+ 				}
+@@ -24798,6 +24829,15 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 						apiError: void 0,
+ 						deferredErrorChunk: void 0
+ 					});
++				} else if (activeFallbackModelIndex + 1 < models.length) {
++					// Same escalation as the synchronous-throw path above, for errors
++					// that only surface after the model already started streaming.
++					apiErrorRetryResult = { retry: true, advanceFallbackModel: true };
++					runState.setState({
++						hasErrored: false,
++						apiError: void 0,
++						deferredErrorChunk: void 0
++					});
+ 				}
+ 			}
+ 			if (apiErrorRetryResult?.retry && options?.abortSignal?.aborted) {
+@@ -24813,9 +24853,13 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 			}
+ 			if (apiErrorRetryResult?.retry) {
+ 				cleanupProviderToolSpans(true);
++				const advancingFallbackModel = apiErrorRetryResult.advanceFallbackModel === true;
++				const nextFallbackModelIndex = advancingFallbackModel ? activeFallbackModelIndex + 1 : activeFallbackModelIndex;
+ 				const currentProcessorRetryCount = inputData.processorRetryCount || 0;
+ 				const steps = inputData.output?.steps || [];
+-				const nextProcessorRetryCount = currentProcessorRetryCount + 1;
++				// A model switch gets its own fresh retry budget instead of inheriting
++				// the exhausted count from the model it's replacing.
++				const nextProcessorRetryCount = advancingFallbackModel ? 0 : currentProcessorRetryCount + 1;
+ 				const messages = {
+ 					all: messageList.get.all.aiV5.model(),
+ 					user: messageList.get.input.aiV5.model(),
+@@ -24843,7 +24887,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 					},
+ 					messages,
+ 					processorRetryCount: nextProcessorRetryCount,
+-					...activeFallbackModelIndex > 0 ? { fallbackModelIndex: activeFallbackModelIndex } : {}
++					...nextFallbackModelIndex > 0 ? { fallbackModelIndex: nextFallbackModelIndex } : {}
+ 				};
+ 			}
+ 			if (runState.state.deferredErrorChunk && runState.state.hasErrored) {
 diff --git a/dist/agent-CKAVuxKN.js b/dist/agent-CKAVuxKN.js
-index 2d9462a..dd28b35 100644
+index 2d9462a..3f41837 100644
 --- a/dist/agent-CKAVuxKN.js
 +++ b/dist/agent-CKAVuxKN.js
 @@ -13127,11 +13127,23 @@ var TokenLimiterProcessor = class TokenLimiterProcessor {
@@ -54,120 +138,87 @@ index 2d9462a..dd28b35 100644
  			} else tokenString += JSON.stringify(part);
  		}
  		overhead += TokenLimiterProcessor.TOKENS_PER_MESSAGE;
-diff --git a/dist/background-tasks/types.d.ts b/dist/background-tasks/types.d.ts
-index 2b857d5..1c7eab0 100644
---- a/dist/background-tasks/types.d.ts
-+++ b/dist/background-tasks/types.d.ts
-@@ -175,6 +175,8 @@ export interface ToolBackgroundConfig {
- }
- export type AgentBackgroundToolConfig = boolean | {
-     enabled: boolean;
-+    /** Whether calls run in the background when the model omits `_background`. Defaults to `enabled`. */
-+    defaultEnabled?: boolean;
-     timeoutMs?: number;
- };
- export interface AgentBackgroundConfig {
-diff --git a/dist/background-tasks-BOCbbAxn.cjs b/dist/background-tasks-BOCbbAxn.cjs
-index 27a1c8b..a1f6b62 100644
---- a/dist/background-tasks-BOCbbAxn.cjs
-+++ b/dist/background-tasks-BOCbbAxn.cjs
-@@ -1101,8 +1101,10 @@ function resolveBackgroundConfig({ llmBgOverrides, toolName, toolConfig, agentCo
- 		maxRetries: managerConfig?.defaultRetries?.maxRetries ?? 0
- 	};
- 	const agentToolConfig = resolveAgentToolConfig(toolName, agentConfig);
-+	const eligible = agentToolConfig?.enabled ?? toolConfig?.enabled ?? false;
-+	const defaultEnabled = agentToolConfig?.defaultEnabled ?? eligible;
- 	return {
--		runInBackground: agentToolConfig?.enabled ?? toolConfig?.enabled ?? false ? llmOverride?.enabled ?? true : false,
-+		runInBackground: eligible ? llmOverride?.enabled ?? defaultEnabled : false,
- 		timeoutMs: llmOverride?.timeoutMs ?? agentToolConfig?.timeoutMs ?? toolConfig?.timeoutMs ?? managerConfig?.defaultTimeoutMs ?? 3e5,
- 		maxRetries: llmOverride?.maxRetries ?? toolConfig?.maxRetries ?? managerConfig?.defaultRetries?.maxRetries ?? 0
- 	};
-@@ -1156,17 +1158,18 @@ const backgroundOverrideZodSchema = zod_v4.z.object({
- */
- function generateBackgroundTaskSystemPrompt(tools, agentConfig) {
- 	const eligibleTools = [];
--	const enableAll = agentConfig?.tools === "all";
- 	for (const [toolName, tool] of Object.entries(tools)) {
--		const bgEnabledFromAgentConfig = agentConfig?.tools === "all" ? false : typeof agentConfig?.tools?.[toolName] === "boolean" ? agentConfig.tools[toolName] : agentConfig?.tools?.[toolName]?.enabled ?? false;
-+		const agentToolConfig = resolveAgentToolConfig(toolName, agentConfig);
-+		const eligible = agentToolConfig?.enabled ?? tool.background?.enabled ?? false;
-+		if (!eligible) continue;
- 		eligibleTools.push({
- 			toolName,
- 			toolConfig: tool.background,
--			defaultBackground: enableAll ? true : bgEnabledFromAgentConfig ?? tool.background?.enabled ?? false
-+			defaultBackground: agentToolConfig?.defaultEnabled ?? eligible
- 		});
- 	}
- 	if (eligibleTools.length === 0) return;
--	return `You have the ability to run certain tools in the background while continuing the conversation. The following tools support background execution:
-+	return `The following tools support background execution:
- ${eligibleTools.map((t) => `- ${t.toolName} (default: ${t.defaultBackground ? "background" : "foreground"})`).join("\n")}
- 
- For any of these tools, you can include a "_background" field in the tool arguments to override the default:
-@@ -1175,10 +1178,10 @@ For any of these tools, you can include a "_background" field in the tool argume
- All fields in "_background" are optional. Only include what you want to override.
- 
- Guidelines:
--- Use background execution when the user doesn't need the result immediately, or when you're launching multiple independent tasks.
-+- Use background execution for asynchronous work or multiple independent tasks.
- - Use foreground execution when the user is directly waiting for the result and the conversation can't continue without it.
- - If you don't include "_background", the tool's default configuration is used.
--- When a tool runs in the background, you'll receive a placeholder result with a task ID. You can reference this in your response to the user.
-+- When a tool runs in the background, its completion is injected automatically. Do not poll it.
- 
- IMPORTANT: "_background" field is always an object. The fields in the _background field should be inside the _background object, not outside of it.`;
- }
-diff --git a/dist/background-tasks-C4VvnJ3T.js b/dist/background-tasks-C4VvnJ3T.js
-index eeea17d..5ca25f3 100644
---- a/dist/background-tasks-C4VvnJ3T.js
-+++ b/dist/background-tasks-C4VvnJ3T.js
-@@ -1101,8 +1101,10 @@ function resolveBackgroundConfig({ llmBgOverrides, toolName, toolConfig, agentCo
- 		maxRetries: managerConfig?.defaultRetries?.maxRetries ?? 0
- 	};
- 	const agentToolConfig = resolveAgentToolConfig(toolName, agentConfig);
-+	const eligible = agentToolConfig?.enabled ?? toolConfig?.enabled ?? false;
-+	const defaultEnabled = agentToolConfig?.defaultEnabled ?? eligible;
- 	return {
--		runInBackground: agentToolConfig?.enabled ?? toolConfig?.enabled ?? false ? llmOverride?.enabled ?? true : false,
-+		runInBackground: eligible ? llmOverride?.enabled ?? defaultEnabled : false,
- 		timeoutMs: llmOverride?.timeoutMs ?? agentToolConfig?.timeoutMs ?? toolConfig?.timeoutMs ?? managerConfig?.defaultTimeoutMs ?? 3e5,
- 		maxRetries: llmOverride?.maxRetries ?? toolConfig?.maxRetries ?? managerConfig?.defaultRetries?.maxRetries ?? 0
- 	};
-@@ -1156,17 +1158,18 @@ const backgroundOverrideZodSchema = z.object({
- */
- function generateBackgroundTaskSystemPrompt(tools, agentConfig) {
- 	const eligibleTools = [];
--	const enableAll = agentConfig?.tools === "all";
- 	for (const [toolName, tool] of Object.entries(tools)) {
--		const bgEnabledFromAgentConfig = agentConfig?.tools === "all" ? false : typeof agentConfig?.tools?.[toolName] === "boolean" ? agentConfig.tools[toolName] : agentConfig?.tools?.[toolName]?.enabled ?? false;
-+		const agentToolConfig = resolveAgentToolConfig(toolName, agentConfig);
-+		const eligible = agentToolConfig?.enabled ?? tool.background?.enabled ?? false;
-+		if (!eligible) continue;
- 		eligibleTools.push({
- 			toolName,
- 			toolConfig: tool.background,
--			defaultBackground: enableAll ? true : bgEnabledFromAgentConfig ?? tool.background?.enabled ?? false
-+			defaultBackground: agentToolConfig?.defaultEnabled ?? eligible
- 		});
- 	}
- 	if (eligibleTools.length === 0) return;
--	return `You have the ability to run certain tools in the background while continuing the conversation. The following tools support background execution:
-+	return `The following tools support background execution:
- ${eligibleTools.map((t) => `- ${t.toolName} (default: ${t.defaultBackground ? "background" : "foreground"})`).join("\n")}
- 
- For any of these tools, you can include a "_background" field in the tool arguments to override the default:
-@@ -1175,10 +1178,10 @@ For any of these tools, you can include a "_background" field in the tool argume
- All fields in "_background" are optional. Only include what you want to override.
- 
- Guidelines:
--- Use background execution when the user doesn't need the result immediately, or when you're launching multiple independent tasks.
-+- Use background execution for asynchronous work or multiple independent tasks.
- - Use foreground execution when the user is directly waiting for the result and the conversation can't continue without it.
- - If you don't include "_background", the tool's default configuration is used.
--- When a tool runs in the background, you'll receive a placeholder result with a task ID. You can reference this in your response to the user.
-+- When a tool runs in the background, its completion is injected automatically. Do not poll it.
- 
- IMPORTANT: "_background" field is always an object. The fields in the _background field should be inside the _background object, not outside of it.`;
- }
+@@ -24660,7 +24672,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 							...options,
+ 							messageId: currentMessageId
+ 						}) } : void 0;
+-						if ((await processorRunner.runProcessAPIError({
++						const syncErrorResult = await processorRunner.runProcessAPIError({
+ 							error,
+ 							messages: messageList.get.all.db(),
+ 							messageList,
+@@ -24677,7 +24689,8 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 								outputStream.messageId = currentMessageId;
+ 								return currentMessageId;
+ 							}
+-						})).retry && canRetryError) {
++						});
++						if (syncErrorResult.retry && canRetryError) {
+ 							runState.setState({
+ 								hasErrored: false,
+ 								apiError: void 0
+@@ -24691,6 +24704,24 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 								processAPIErrorRetry: { retry: true }
+ 							};
+ 						}
++						// Retries on this model are exhausted (or the processor declined). Before
++						// giving up entirely, fall through to the next fallback model instead of
++						// throwing, so a model that errors here (not just one that fails to start)
++						// still gets a chance at the rest of the fallback array.
++						if (activeFallbackModelIndex + 1 < models.length) {
++							runState.setState({
++								hasErrored: false,
++								apiError: void 0
++							});
++							return {
++								outputStream,
++								callBail: false,
++								runState,
++								stepTools: currentStep.tools,
++								stepWorkspace: currentStep.workspace,
++								processAPIErrorRetry: { retry: true, advanceFallbackModel: true }
++							};
++						}
+ 						throw error;
+ 					}
+ 				}
+@@ -24796,6 +24827,15 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 						apiError: void 0,
+ 						deferredErrorChunk: void 0
+ 					});
++				} else if (activeFallbackModelIndex + 1 < models.length) {
++					// Same escalation as the synchronous-throw path above, for errors
++					// that only surface after the model already started streaming.
++					apiErrorRetryResult = { retry: true, advanceFallbackModel: true };
++					runState.setState({
++						hasErrored: false,
++						apiError: void 0,
++						deferredErrorChunk: void 0
++					});
+ 				}
+ 			}
+ 			if (apiErrorRetryResult?.retry && options?.abortSignal?.aborted) {
+@@ -24811,9 +24851,13 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 			}
+ 			if (apiErrorRetryResult?.retry) {
+ 				cleanupProviderToolSpans(true);
++				const advancingFallbackModel = apiErrorRetryResult.advanceFallbackModel === true;
++				const nextFallbackModelIndex = advancingFallbackModel ? activeFallbackModelIndex + 1 : activeFallbackModelIndex;
+ 				const currentProcessorRetryCount = inputData.processorRetryCount || 0;
+ 				const steps = inputData.output?.steps || [];
+-				const nextProcessorRetryCount = currentProcessorRetryCount + 1;
++				// A model switch gets its own fresh retry budget instead of inheriting
++				// the exhausted count from the model it's replacing.
++				const nextProcessorRetryCount = advancingFallbackModel ? 0 : currentProcessorRetryCount + 1;
+ 				const messages = {
+ 					all: messageList.get.all.aiV5.model(),
+ 					user: messageList.get.input.aiV5.model(),
+@@ -24841,7 +24885,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 					},
+ 					messages,
+ 					processorRetryCount: nextProcessorRetryCount,
+-					...activeFallbackModelIndex > 0 ? { fallbackModelIndex: activeFallbackModelIndex } : {}
++					...nextFallbackModelIndex > 0 ? { fallbackModelIndex: nextFallbackModelIndex } : {}
+ 				};
+ 			}
+ 			if (runState.state.deferredErrorChunk && runState.state.hasErrored) {

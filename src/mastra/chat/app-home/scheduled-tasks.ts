@@ -3,14 +3,14 @@ import { chatChannelId } from '../../lib/ids';
 import { isAgentSchedule } from '../../tools/scheduled-tasks/queries';
 import { chat } from '../instance';
 import { getMastra } from '../mastra-instance';
-import { publishHome } from './view';
 
 const ids = {
   cancel: 'app_home_cancel_task',
 };
 
 export async function scheduledTasksBlocks(
-  userId: string
+  userId: string,
+  maxBlocks: number
 ): Promise<Record<string, unknown>[]> {
   const schedules = await getMastra().schedules.list({
     agentId: agentConfig.id,
@@ -36,7 +36,15 @@ export async function scheduledTasksBlocks(
     return blocks;
   }
 
-  for (const task of tasks) {
+  // Slack's Home view caps out at 100 blocks total. Leave room for the
+  // header and trailing divider already counted here, plus one more slot
+  // for an overflow notice if not every task fits.
+  const available = Math.max(0, maxBlocks - 2);
+  const overflow = Math.max(0, tasks.length - available);
+  const shown =
+    overflow > 0 ? tasks.slice(0, Math.max(0, available - 1)) : tasks;
+
+  for (const task of shown) {
     const title =
       task.name ??
       (task.prompt.length > 60 ? `${task.prompt.slice(0, 60)}…` : task.prompt);
@@ -65,11 +73,24 @@ export async function scheduledTasksBlocks(
       },
     });
   }
+  if (overflow > 0) {
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `_...and ${overflow} more. Cancel a task above to make room to see the rest._`,
+      },
+    });
+  }
   blocks.push({ type: 'divider' });
   return blocks;
 }
 
-export function registerScheduledTasks(): void {
+export function registerScheduledTasks({
+  publishHome,
+}: {
+  publishHome: (userId: string) => Promise<void>;
+}): void {
   chat().onAction(ids.cancel, async (event) => {
     const id = event.value;
     if (!id) {

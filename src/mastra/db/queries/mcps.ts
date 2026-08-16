@@ -1,3 +1,4 @@
+import { sql } from 'kysely';
 import { rawId } from '../../lib/ids';
 import type { MCPServerConfig } from '../../types';
 import { db } from '../client';
@@ -21,24 +22,42 @@ export async function listMCPServers(
 export async function upsertMCPServer({
   userId,
   server,
+  maxServers,
 }: {
   userId: string;
   server: MCPServerConfig;
-}): Promise<void> {
-  await db
-    .insertInto('mcp_servers')
-    .values({
-      name: server.name,
-      token: server.token ?? null,
-      url: server.url,
-      user_id: rawId(userId),
-    })
-    .onConflict((oc) =>
-      oc
-        .columns(['user_id', 'name'])
-        .doUpdateSet({ token: server.token ?? null, url: server.url })
-    )
-    .execute();
+  maxServers: number;
+}): Promise<'ok' | 'limit-reached'> {
+  const id = rawId(userId);
+  return await db.transaction().execute(async (trx) => {
+    // Serialize per user so two concurrent submits can't both observe room
+    // under maxServers and both insert, pushing the count past it.
+    await sql`select pg_advisory_xact_lock(hashtext(${id}))`.execute(trx);
+    const existing = await trx
+      .selectFrom('mcp_servers')
+      .select('name')
+      .where('user_id', '=', id)
+      .execute();
+    const isNewServer = !existing.some((row) => row.name === server.name);
+    if (isNewServer && existing.length >= maxServers) {
+      return 'limit-reached';
+    }
+    await trx
+      .insertInto('mcp_servers')
+      .values({
+        name: server.name,
+        token: server.token ?? null,
+        url: server.url,
+        user_id: id,
+      })
+      .onConflict((oc) =>
+        oc
+          .columns(['user_id', 'name'])
+          .doUpdateSet({ token: server.token ?? null, url: server.url })
+      )
+      .execute();
+    return 'ok';
+  });
 }
 
 export async function removeMCPServer({

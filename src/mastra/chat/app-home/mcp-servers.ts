@@ -4,9 +4,9 @@ import {
   removeMCPServer,
   upsertMCPServer,
 } from '../../db/queries/mcps';
+import { findMCPUrlError } from '../../mcp/security';
 import { type MCPServerConfig, mcpServerSchema } from '../../types';
 import { chat } from '../instance';
-import { publishHome } from './view';
 
 const ids = {
   add: 'app_home_add_mcp_server',
@@ -57,7 +57,11 @@ export function mcpServersBlocks(
   ];
 }
 
-export function registerMCPServers(): void {
+export function registerMCPServers({
+  publishHome,
+}: {
+  publishHome: (userId: string) => Promise<void>;
+}): void {
   const bot = chat();
 
   bot.onAction(ids.add, async (event) => {
@@ -110,16 +114,30 @@ export function registerMCPServers(): void {
       token: event.values.token?.trim() || undefined,
     });
     if (!parsed.success) {
-      return;
+      const errors: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        const [field] = issue.path;
+        if (typeof field === 'string' && !errors[field]) {
+          errors[field] = issue.message;
+        }
+      }
+      return { action: 'errors' as const, errors };
     }
-    const servers = await listMCPServers(event.user.userId);
-    const isNewServer = !servers.some(
-      (server) => server.name === parsed.data.name
-    );
-    if (isNewServer && servers.length >= MAX_SERVERS) {
-      return;
+    const urlError = await findMCPUrlError(parsed.data.url);
+    if (urlError) {
+      return { action: 'errors' as const, errors: { url: urlError } };
     }
-    await upsertMCPServer({ userId: event.user.userId, server: parsed.data });
+    const result = await upsertMCPServer({
+      userId: event.user.userId,
+      server: parsed.data,
+      maxServers: MAX_SERVERS,
+    });
+    if (result === 'limit-reached') {
+      return {
+        action: 'errors' as const,
+        errors: { name: `You can connect at most ${MAX_SERVERS} servers.` },
+      };
+    }
     await publishHome(event.user.userId);
   });
 }

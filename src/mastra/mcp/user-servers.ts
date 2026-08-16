@@ -26,22 +26,43 @@ async function buildClient({
   return new MCPClient({
     id: `user-mcp-${userId}`,
     servers: Object.fromEntries(
-      servers.map((server) => [
-        server.name,
-        {
-          url: new URL(server.url),
-          requireToolApproval: true,
-          ...(server.token
-            ? {
-                requestInit: {
-                  headers: { Authorization: `Bearer ${server.token}` },
-                },
-              }
-            : {}),
-        },
-      ])
+      servers.map((server) => {
+        const url = new URL(server.url);
+        return [
+          server.name,
+          {
+            url,
+            requireToolApproval: true,
+            allowedHosts: [url.host],
+            ...(server.token
+              ? {
+                  requestInit: {
+                    headers: { Authorization: `Bearer ${server.token}` },
+                  },
+                }
+              : {}),
+          },
+        ];
+      })
     ),
   });
+}
+
+async function dropClient(userId: string): Promise<void> {
+  const cached = clients.get(userId);
+  if (!cached) {
+    return;
+  }
+  clients.delete(userId);
+  try {
+    const client = await cached.promise;
+    await client.disconnect();
+  } catch (error) {
+    logger.debug('[mcp] failed to disconnect client on removal', {
+      error,
+      userId,
+    });
+  }
 }
 
 function resolveClient({
@@ -78,11 +99,12 @@ function resolveClient({
 export async function userMCPTools(
   userId: string
 ): Promise<Record<string, unknown>> {
-  const servers = await listMCPServers(userId);
-  if (servers.length === 0) {
-    return {};
-  }
   try {
+    const servers = await listMCPServers(userId);
+    if (servers.length === 0) {
+      await dropClient(userId);
+      return {};
+    }
     const client = await resolveClient({ userId, servers });
     return await client.listTools();
   } catch (error) {

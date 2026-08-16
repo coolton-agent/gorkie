@@ -11,7 +11,7 @@ export function registerAppHome(): void {
       logger.error('[app-home] publishHome failed', { error })
     )
   );
-  registerCustomInstructions();
-  registerMCPServers();
-  registerScheduledTasks();
+  registerCustomInstructions({ publishHome });
+  registerMCPServers({ publishHome });
+  registerScheduledTasks({ publishHome });
 }

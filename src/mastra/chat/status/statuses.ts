@@ -1,37 +1,6 @@
-import {
-  defaultTypingStatus,
-  type TypingStatusFn,
-} from '@mastra/core/channels';
-import { label } from '../lib/label';
+import { type Args, fileName, fit, str } from './format';
 
-type Args = Record<string, unknown>;
-
-function fit(
-  prefix: string,
-  content: string,
-  suffix: string,
-  max = 50
-): string {
-  const budget = max - prefix.length - suffix.length;
-  const flat = content.replace(/\s+/g, ' ').trim();
-  const clipped = flat.length > budget ? flat.slice(0, budget) : flat;
-  return prefix + clipped + suffix;
-}
-
-function truncate(text: string, max: number): string {
-  return text.length > max ? text.slice(0, max) : text;
-}
-
-function str(args: Args, key: string): string | undefined {
-  const value = args[key];
-  return typeof value === 'string' && value.length > 0 ? value : undefined;
-}
-
-function fileName(path: string): string {
-  return path.split('/').filter(Boolean).at(-1) ?? path;
-}
-
-const statuses: Record<string, (args: Args) => string> = {
+export const statuses: Record<string, (args: Args) => string> = {
   call_slack_api: (args) => {
     const method = str(args, 'method');
     return method
@@ -134,6 +103,7 @@ const statuses: Record<string, (args: Args) => string> = {
   },
   list_scheduled_tasks: () => 'is checking scheduled tasks…',
   list_threads: () => 'is listing threads…',
+  load_tool: () => 'is loading a tool…',
   lookup_canvas_sections: () => 'is inspecting a canvas…',
   pause_scheduled_task: () => 'is pausing a scheduled task…',
   post_message: (args) => {
@@ -176,6 +146,18 @@ const statuses: Record<string, (args: Args) => string> = {
       ? fit('is searching the web for "', query, '"…')
       : 'is searching the web…';
   },
+  search_tools: (args) => {
+    const query = str(args, 'query');
+    return query
+      ? fit('is looking for a tool: "', query, '"…')
+      : 'is looking for a tool…';
+  },
+  skill_search: (args) => {
+    const query = str(args, 'query');
+    return query
+      ? fit('is looking for a skill: "', query, '"…')
+      : 'is looking for a skill…';
+  },
   slack: () => 'is working in Slack…',
   summarize_thread: (args) => {
     const instructions = str(args, 'instructions');
@@ -200,69 +182,4 @@ const statuses: Record<string, (args: Args) => string> = {
       ? fit('is writing ', fileName(path), '…')
       : 'is writing a file…';
   },
-};
-
-const delegationAgentIds = new Set(['research', 'explore']);
-
-function delegatedTool(
-  toolName: string
-): { agentId: string; childToolName: string } | undefined {
-  for (const agentId of delegationAgentIds) {
-    const prefix = `agent-${agentId}_`;
-    if (toolName.startsWith(prefix)) {
-      return { agentId, childToolName: toolName.slice(prefix.length) };
-    }
-  }
-}
-
-function splitNamespacedTool(
-  toolName: string
-): { server: string; tool: string } | undefined {
-  const index = toolName.indexOf('_');
-  if (index <= 0 || index >= toolName.length - 1) {
-    return;
-  }
-  return { server: toolName.slice(0, index), tool: toolName.slice(index + 1) };
-}
-
-export const typingStatus: TypingStatusFn = (chunk, context) => {
-  if (chunk.type !== 'tool-call') {
-    return defaultTypingStatus(chunk, context);
-  }
-
-  const { toolName } = chunk.payload;
-  if (context.channelTools.has(toolName)) {
-    return false;
-  }
-
-  const args = (chunk.payload.args as Args | undefined) ?? {};
-  if (
-    toolName.startsWith('agent-') &&
-    delegationAgentIds.has(toolName.slice(6))
-  ) {
-    return truncate(
-      `is spawning a ${label(toolName.slice(6)).toLowerCase()} agent…`,
-      50
-    );
-  }
-
-  const delegated = delegatedTool(toolName);
-  if (delegated) {
-    return truncate(
-      `is using ${delegated.agentId}: ${label(delegated.childToolName).toLowerCase()}…`,
-      50
-    );
-  }
-
-  const known = statuses[toolName]?.(args);
-  if (known) {
-    return truncate(known, 50);
-  }
-
-  const namespaced = splitNamespacedTool(toolName);
-  const status = namespaced
-    ? `is using ${label(namespaced.server)}: ${label(namespaced.tool).toLowerCase()}…`
-    : `is using ${label(toolName).toLowerCase()}…`;
-
-  return truncate(status, 50);
 };

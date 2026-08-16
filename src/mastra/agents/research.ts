@@ -23,7 +23,6 @@ export const researchAgent = new Agent({
   description: research.description,
   instructions: [research.prompt, slackToolPrompt, readOnlySlackCodeModePrompt],
   model: scout,
-  backgroundTasks: { disabled: true },
   errorProcessors: defaultErrorProcessors(),
   maxProcessorRetries: 2,
   memory: new Memory({ storage: new InMemoryStore() }),

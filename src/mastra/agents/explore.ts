@@ -23,7 +23,6 @@ export const exploreAgent = new Agent({
   description: explore.description,
   instructions: explore.prompt,
   model: explorer,
-  backgroundTasks: { disabled: true },
   errorProcessors: defaultErrorProcessors(),
   maxProcessorRetries: 2,
   memory: new Memory({ storage: new InMemoryStore() }),

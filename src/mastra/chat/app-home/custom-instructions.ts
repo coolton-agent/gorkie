@@ -1,7 +1,6 @@
 import { Modal, TextInput } from 'chat';
 import { getInstructions, setInstructions } from '../../db/queries/settings';
 import { chat } from '../instance';
-import { publishHome } from './view';
 
 const ids = {
   clear: 'app_home_clear_instructions',
@@ -64,7 +63,11 @@ export function customInstructionsBlocks(
   ];
 }
 
-export function registerCustomInstructions(): void {
+export function registerCustomInstructions({
+  publishHome,
+}: {
+  publishHome: (userId: string) => Promise<void>;
+}): void {
   const bot = chat();
 
   bot.onAction(ids.edit, async (event) => {

@@ -11,11 +11,12 @@ import {
   onMention,
   onSubscribedMessage,
 } from '../chat/handlers';
-import { typingStatus } from '../chat/typing-status';
+import { status } from '../chat/status';
 import { agent as config } from '../config';
 import { getInstructions } from '../db/queries/settings';
 import { channelContext } from '../lib/context';
 import { defaultErrorProcessors } from '../lib/error-handling';
+import { logger } from '../lib/logger';
 import { inconclusiveFinish, stepCountIs, toolCall } from '../lib/tools';
 import { userMCPTools } from '../mcp/user-servers';
 import { clearStatus } from '../processors/clear-status';
@@ -42,7 +43,14 @@ const orchestrator = new Agent({
       { role: 'system' as const, content: slackCodeModePrompt },
     ];
     const { userId } = channelContext(requestContext);
-    const userInstructions = userId ? await getInstructions(userId) : undefined;
+    const userInstructions = userId
+      ? await getInstructions(userId).catch((error: unknown) => {
+          logger.debug('[orchestrator] failed to load user instructions', {
+            error,
+            userId,
+          });
+        })
+      : undefined;
     if (userInstructions) {
       messages.push({
         role: 'system' as const,
@@ -138,7 +146,7 @@ const orchestrator = new Agent({
         adapter: slack,
         streaming: true,
         toolDisplay: 'hidden',
-        typingStatus,
+        typingStatus: status,
         formatError: (error) =>
           `*Oops, something went wrong.*\n\n> ${error.message}`,
       },
