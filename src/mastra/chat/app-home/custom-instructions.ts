@@ -20,7 +20,7 @@ export function customInstructionsBlocks({
   return [
     {
       type: 'header',
-      text: { type: 'plain_text', text: '⚙️ Custom Instructions' },
+      text: { type: 'plain_text', text: 'Custom Instructions' },
     },
     {
       type: 'section',

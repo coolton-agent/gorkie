@@ -20,7 +20,7 @@ export async function scheduledTasksBlocks(
   const blocks: Record<string, unknown>[] = [
     {
       type: 'header',
-      text: { type: 'plain_text', text: '⏰ Scheduled Tasks' },
+      text: { type: 'plain_text', text: 'Scheduled Tasks' },
     },
   ];
 

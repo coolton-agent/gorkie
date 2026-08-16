@@ -26,7 +26,7 @@ export const content = {
     blocks: [
       {
         type: 'header',
-        text: { type: 'plain_text', text: "👋 I'm gorkie" },
+        text: { type: 'plain_text', text: "I'm gorkie" },
       },
       {
         type: 'section',

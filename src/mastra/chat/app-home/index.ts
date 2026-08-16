@@ -1,6 +1,7 @@
 import { logger } from '../../lib/logger';
 import { chat } from '../instance';
 import { registerCustomInstructions } from './custom-instructions';
+import { registerMcpServers } from './mcp-servers';
 import { registerScheduledTasks } from './scheduled-tasks';
 import { publishHome } from './view';
 
@@ -11,5 +12,6 @@ export function registerAppHome(): void {
     )
   );
   registerCustomInstructions();
+  registerMcpServers();
   registerScheduledTasks();
 }

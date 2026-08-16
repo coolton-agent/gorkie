@@ -2,6 +2,7 @@ import { getUserSettings } from '../../lib/settings';
 import { slack } from '../client';
 import { content } from '../content';
 import { customInstructionsBlocks } from './custom-instructions';
+import { mcpServersBlocks } from './mcp-servers';
 import { scheduledTasksBlocks } from './scheduled-tasks';
 
 export async function buildHomeView(
@@ -15,6 +16,7 @@ export async function buildHomeView(
       ...content.home.blocks,
       { type: 'divider' },
       ...customInstructionsBlocks(settings),
+      ...mcpServersBlocks(settings),
       ...scheduled,
     ],
   };
