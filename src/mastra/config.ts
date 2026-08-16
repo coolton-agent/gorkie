@@ -9,3 +9,7 @@ export const agent = {
   maxTokens: { input: 200_000, output: 32_768 },
   maxSteps: 1000,
 };
+
+export const scheduledTasks = {
+  minInterval: 30 * 60 * 1000,
+};
