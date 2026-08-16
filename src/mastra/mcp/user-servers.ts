@@ -3,30 +3,27 @@ import { listMCPServers } from '../db/queries/mcps';
 import { logger } from '../lib/logger';
 import type { MCPServerConfig } from '../types';
 
-const clients = new Map<string, { client: MCPClient; key: string }>();
+const clients = new Map<string, { key: string; promise: Promise<MCPClient> }>();
 
-async function resolveClient({
+async function buildClient({
   userId,
   servers,
+  stale,
 }: {
   userId: string;
   servers: MCPServerConfig[];
+  stale: Promise<MCPClient> | undefined;
 }): Promise<MCPClient> {
-  const key = JSON.stringify(servers);
-  const cached = clients.get(userId);
-  if (cached && cached.key === key) {
-    return cached.client;
-  }
-  if (cached) {
-    await cached.client.disconnect().catch((error: unknown) => {
+  if (stale) {
+    const staleClient = await stale;
+    await staleClient.disconnect().catch((error: unknown) => {
       logger.debug('[mcp] failed to disconnect stale client', {
         error,
         userId,
       });
     });
   }
-
-  const client = new MCPClient({
+  return new MCPClient({
     id: `user-mcp-${userId}`,
     servers: Object.fromEntries(
       servers.map((server) => [
@@ -45,8 +42,33 @@ async function resolveClient({
       ])
     ),
   });
-  clients.set(userId, { client, key });
-  return client;
+}
+
+function resolveClient({
+  userId,
+  servers,
+}: {
+  userId: string;
+  servers: MCPServerConfig[];
+}): Promise<MCPClient> {
+  const key = JSON.stringify(servers);
+  const cached = clients.get(userId);
+  if (cached && cached.key === key) {
+    return cached.promise;
+  }
+  const promise = buildClient({ userId, servers, stale: cached?.promise });
+  const entry = { key, promise };
+  clients.set(userId, entry);
+
+  // A failed build shouldn't poison the cache: drop it so the next call
+  // retries instead of replaying the same rejection forever.
+  promise.catch(() => {
+    if (clients.get(userId) === entry) {
+      clients.delete(userId);
+    }
+  });
+
+  return promise;
 }
 
 // User-added MCP servers are arbitrary, unvetted third parties, so every tool

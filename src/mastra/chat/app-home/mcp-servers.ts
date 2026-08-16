@@ -28,7 +28,7 @@ export function mcpServersBlocks(
       text: {
         type: 'mrkdwn',
         text: servers.length
-          ? "Extra tools connected from these servers are only available on your own turns, and always ask for your approval before they run, since they're third parties gorkie doesn't vet."
+          ? 'Tools from these servers are only available on your own turns.'
           : '_No MCP servers connected. Add one to give gorkie extra tools, just for you._',
       },
     },

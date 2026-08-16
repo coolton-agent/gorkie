@@ -1,13 +1,11 @@
 import type { ModelWithRetries } from '@mastra/core/agent';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { env } from '@/env';
 
-function hackclub(modelId: string) {
-  return {
-    id: `openrouter/${modelId}` as const,
-    url: 'https://ai.hackclub.com/proxy/v1',
-    apiKey: env.HACKCLUB_API_KEY,
-  };
-}
+export const hackclub = createOpenRouter({
+  apiKey: env.HACKCLUB_API_KEY,
+  baseURL: 'https://ai.hackclub.com/proxy/v1',
+});
 
 function opencode(modelId: string) {
   return `opencode-go/${modelId}` as const;

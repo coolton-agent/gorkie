@@ -16,7 +16,7 @@ import { agent as config } from '../config';
 import { getInstructions } from '../db/queries/settings';
 import { channelContext } from '../lib/context';
 import { defaultErrorProcessors } from '../lib/error-handling';
-import { stepCountIs, toolCall } from '../lib/tools';
+import { inconclusiveFinish, stepCountIs, toolCall } from '../lib/tools';
 import { userMCPTools } from '../mcp/user-servers';
 import { delegatedTools } from '../processors/delegated-tools';
 import { sandbox } from '../processors/sandbox';
@@ -64,7 +64,11 @@ const orchestrator = new Agent({
       messageFilter: ({ messages }) =>
         messages.filter(({ role }) => role === 'user').slice(-1),
     },
-    stopWhen: [toolCall('wait'), stepCountIs(config.maxSteps)],
+    stopWhen: [
+      toolCall('wait'),
+      inconclusiveFinish(),
+      stepCountIs(config.maxSteps),
+    ],
     autoResumeSuspendedTools: true,
   },
   workspace,
