@@ -13,9 +13,9 @@ import {
 } from '../chat/handlers';
 import { typingStatus } from '../chat/typing-status';
 import { agent as config } from '../config';
+import { getInstructions } from '../db/queries/settings';
 import { channelContext } from '../lib/context';
 import { defaultErrorProcessors } from '../lib/error-handling';
-import { getUserSettings } from '../lib/settings';
 import { stepCountIs, toolCall } from '../lib/tools';
 import { userMcpTools } from '../mcp/user-servers';
 import { delegatedTools } from '../processors/delegated-tools';
@@ -41,9 +41,7 @@ const orchestrator = new Agent({
       { role: 'system' as const, content: slackCodeModePrompt },
     ];
     const { userId } = channelContext(requestContext);
-    const userInstructions = userId
-      ? (await getUserSettings(userId)).instructions
-      : undefined;
+    const userInstructions = userId ? await getInstructions(userId) : undefined;
     if (userInstructions) {
       messages.push({
         role: 'system' as const,

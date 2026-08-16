@@ -15,8 +15,8 @@ import { summarizer } from './agents/summarizer';
 import { registerEvents } from './chat/events';
 import { setChat } from './chat/instance';
 import { setMastra } from './chat/mastra-instance';
+import { postgresStore } from './db';
 import { buildAllowlist } from './lib/allowed-users';
-import { postgresStore } from './lib/db';
 import { logger } from './lib/logger';
 
 process.on('unhandledRejection', (err: unknown) => {

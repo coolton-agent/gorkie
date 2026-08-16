@@ -1,6 +1,10 @@
 import { Modal, TextInput } from 'chat';
-import { getUserSettings, setUserSettings } from '../../lib/settings';
-import { mcpServerSchema, type UserSettings } from '../../types';
+import {
+  listMcpServers,
+  removeMcpServer,
+  upsertMcpServer,
+} from '../../db/queries/mcps';
+import { type McpServerConfig, mcpServerSchema } from '../../types';
 import { chat } from '../instance';
 import { publishHome } from './view';
 
@@ -9,11 +13,9 @@ const REMOVE_ACTION_ID = 'app_home_remove_mcp_server';
 const MODAL_CALLBACK_ID = 'app_home_mcp_server_modal';
 const MAX_SERVERS = 10;
 
-export function mcpServersBlocks({
-  mcpServers,
-}: UserSettings): Record<string, unknown>[] {
-  const servers = mcpServers ?? [];
-
+export function mcpServersBlocks(
+  servers: McpServerConfig[]
+): Record<string, unknown>[] {
   const blocks: Record<string, unknown>[] = [
     {
       type: 'header',
@@ -63,8 +65,8 @@ export function registerMcpServers(): void {
   const bot = chat();
 
   bot.onAction(ADD_ACTION_ID, async (event) => {
-    const { mcpServers } = await getUserSettings(event.user.userId);
-    if ((mcpServers?.length ?? 0) >= MAX_SERVERS) {
+    const servers = await listMcpServers(event.user.userId);
+    if (servers.length >= MAX_SERVERS) {
       return;
     }
     await event.openModal(
@@ -101,13 +103,7 @@ export function registerMcpServers(): void {
     if (!name) {
       return;
     }
-    const { mcpServers } = await getUserSettings(event.user.userId);
-    await setUserSettings({
-      userId: event.user.userId,
-      patch: {
-        mcpServers: mcpServers?.filter((server) => server.name !== name),
-      },
-    });
+    await removeMcpServer({ userId: event.user.userId, name });
     await publishHome(event.user.userId);
   });
 
@@ -120,16 +116,14 @@ export function registerMcpServers(): void {
     if (!parsed.success) {
       return;
     }
-    const { mcpServers } = await getUserSettings(event.user.userId);
-    const withoutSameName = (mcpServers ?? []).filter(
-      (server) => server.name !== parsed.data.name
+    const servers = await listMcpServers(event.user.userId);
+    const isNewServer = !servers.some(
+      (server) => server.name === parsed.data.name
     );
-    await setUserSettings({
-      userId: event.user.userId,
-      patch: {
-        mcpServers: [...withoutSameName, parsed.data].slice(-MAX_SERVERS),
-      },
-    });
+    if (isNewServer && servers.length >= MAX_SERVERS) {
+      return;
+    }
+    await upsertMcpServer({ userId: event.user.userId, server: parsed.data });
     await publishHome(event.user.userId);
   });
 }

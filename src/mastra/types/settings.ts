@@ -14,10 +14,3 @@ export const mcpServerSchema = z.object({
 });
 
 export type McpServerConfig = z.infer<typeof mcpServerSchema>;
-
-export const userSettingsSchema = z.object({
-  instructions: z.string().min(1).max(2000).optional(),
-  mcpServers: z.array(mcpServerSchema).max(10).optional(),
-});
-
-export type UserSettings = z.infer<typeof userSettingsSchema>;

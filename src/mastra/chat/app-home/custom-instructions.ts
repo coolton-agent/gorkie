@@ -1,6 +1,5 @@
 import { Modal, TextInput } from 'chat';
-import { getUserSettings, setUserSettings } from '../../lib/settings';
-import type { UserSettings } from '../../types';
+import { getInstructions, setInstructions } from '../../db/queries/settings';
 import { chat } from '../instance';
 import { publishHome } from './view';
 
@@ -9,9 +8,9 @@ const CLEAR_ACTION_ID = 'app_home_clear_instructions';
 const MODAL_CALLBACK_ID = 'app_home_instructions_modal';
 const PREVIEW_LENGTH = 280;
 
-export function customInstructionsBlocks({
-  instructions,
-}: UserSettings): Record<string, unknown>[] {
+export function customInstructionsBlocks(
+  instructions: string | undefined
+): Record<string, unknown>[] {
   const preview =
     instructions && instructions.length > PREVIEW_LENGTH
       ? `${instructions.slice(0, PREVIEW_LENGTH)}…`
@@ -68,7 +67,7 @@ export function registerCustomInstructions(): void {
   const bot = chat();
 
   bot.onAction(EDIT_ACTION_ID, async (event) => {
-    const settings = await getUserSettings(event.user.userId);
+    const instructions = await getInstructions(event.user.userId);
     await event.openModal(
       Modal({
         callbackId: MODAL_CALLBACK_ID,
@@ -81,7 +80,7 @@ export function registerCustomInstructions(): void {
             placeholder:
               'e.g. keep replies short, always show code diffs, address me as vro',
             multiline: true,
-            initialValue: settings.instructions,
+            initialValue: instructions,
             maxLength: 2000,
           }),
         ],
@@ -90,18 +89,18 @@ export function registerCustomInstructions(): void {
   });
 
   bot.onAction(CLEAR_ACTION_ID, async (event) => {
-    await setUserSettings({
+    await setInstructions({
       userId: event.user.userId,
-      patch: { instructions: undefined },
+      instructions: undefined,
     });
     await publishHome(event.user.userId);
   });
 
   bot.onModalSubmit(MODAL_CALLBACK_ID, async (event) => {
     const instructions = event.values.instructions?.trim();
-    await setUserSettings({
+    await setInstructions({
       userId: event.user.userId,
-      patch: { instructions: instructions || undefined },
+      instructions: instructions || undefined,
     });
     await publishHome(event.user.userId);
   });

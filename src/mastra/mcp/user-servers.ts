@@ -1,6 +1,6 @@
 import { MCPClient } from '@mastra/mcp';
+import { listMcpServers } from '../db/queries/mcps';
 import { logger } from '../lib/logger';
-import { getUserSettings } from '../lib/settings';
 import type { McpServerConfig } from '../types';
 
 const clients = new Map<string, { client: MCPClient; key: string }>();
@@ -56,12 +56,12 @@ async function resolveClient({
 export async function userMcpTools(
   userId: string
 ): Promise<Record<string, unknown>> {
-  const { mcpServers } = await getUserSettings(userId);
-  if (!mcpServers || mcpServers.length === 0) {
+  const servers = await listMcpServers(userId);
+  if (servers.length === 0) {
     return {};
   }
   try {
-    const client = await resolveClient({ userId, servers: mcpServers });
+    const client = await resolveClient({ userId, servers });
     return await client.listTools();
   } catch (error) {
     logger.debug('[mcp] failed to list user servers', { error, userId });

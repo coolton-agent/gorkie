@@ -1,4 +1,5 @@
-import { getUserSettings } from '../../lib/settings';
+import { listMcpServers } from '../../db/queries/mcps';
+import { getInstructions } from '../../db/queries/settings';
 import { slack } from '../client';
 import { content } from '../content';
 import { customInstructionsBlocks } from './custom-instructions';
@@ -8,15 +9,18 @@ import { scheduledTasksBlocks } from './scheduled-tasks';
 export async function buildHomeView(
   userId: string
 ): Promise<Record<string, unknown>> {
-  const settings = await getUserSettings(userId);
-  const scheduled = await scheduledTasksBlocks(userId);
+  const [instructions, mcpServers, scheduled] = await Promise.all([
+    getInstructions(userId),
+    listMcpServers(userId),
+    scheduledTasksBlocks(userId),
+  ]);
   return {
     type: 'home',
     blocks: [
       ...content.home.blocks,
       { type: 'divider' },
-      ...customInstructionsBlocks(settings),
-      ...mcpServersBlocks(settings),
+      ...customInstructionsBlocks(instructions),
+      ...mcpServersBlocks(mcpServers),
       ...scheduled,
     ],
   };
