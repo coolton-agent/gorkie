@@ -1,20 +1,38 @@
+import { type ColumnType, Kysely, PostgresDialect, sql } from 'kysely';
 import { type UserSettings, userSettingsSchema } from '../types';
 import { postgresStore } from './db';
 import { rawId } from './ids';
+
+interface UserSettingsTable {
+  settings: ColumnType<unknown, string, string>;
+  updated_at: ColumnType<Date, Date, Date>;
+  user_id: string;
+}
+
+interface Database {
+  user_settings: UserSettingsTable;
+}
+
+const db = new Kysely<Database>({
+  dialect: new PostgresDialect({ pool: postgresStore.pool }),
+});
 
 let tableReady: Promise<void> | undefined;
 
 function ensureTable(): Promise<void> {
   const ready: Promise<void> =
     tableReady ??
-    postgresStore.pool
-      .query(`
-        CREATE TABLE IF NOT EXISTS user_settings (
-          user_id text PRIMARY KEY,
-          settings jsonb NOT NULL DEFAULT '{}'::jsonb,
-          updated_at timestamptz NOT NULL DEFAULT now()
-        )
-      `)
+    db.schema
+      .createTable('user_settings')
+      .ifNotExists()
+      .addColumn('user_id', 'text', (col) => col.primaryKey())
+      .addColumn('settings', 'jsonb', (col) =>
+        col.notNull().defaultTo(sql`'{}'::jsonb`)
+      )
+      .addColumn('updated_at', 'timestamptz', (col) =>
+        col.notNull().defaultTo(sql`now()`)
+      )
+      .execute()
       .then(() => undefined);
   tableReady = ready;
   return ready;
@@ -22,11 +40,11 @@ function ensureTable(): Promise<void> {
 
 export async function getUserSettings(userId: string): Promise<UserSettings> {
   await ensureTable();
-  const result = await postgresStore.pool.query(
-    'SELECT settings FROM user_settings WHERE user_id = $1',
-    [rawId(userId)]
-  );
-  const row = result.rows[0] as { settings: unknown } | undefined;
+  const row = await db
+    .selectFrom('user_settings')
+    .select('settings')
+    .where('user_id', '=', rawId(userId))
+    .executeTakeFirst();
   return row ? userSettingsSchema.parse(row.settings) : {};
 }
 
@@ -37,11 +55,14 @@ export async function setUserSettings(
   await ensureTable();
   const current = await getUserSettings(userId);
   const next = userSettingsSchema.parse({ ...current, ...patch });
-  await postgresStore.pool.query(
-    `INSERT INTO user_settings (user_id, settings, updated_at)
-     VALUES ($1, $2, now())
-     ON CONFLICT (user_id) DO UPDATE SET settings = $2, updated_at = now()`,
-    [rawId(userId), JSON.stringify(next)]
-  );
+  const settings = JSON.stringify(next);
+  const now = new Date();
+  await db
+    .insertInto('user_settings')
+    .values({ user_id: rawId(userId), settings, updated_at: now })
+    .onConflict((oc) =>
+      oc.column('user_id').doUpdateSet({ settings, updated_at: now })
+    )
+    .execute();
   return next;
 }
