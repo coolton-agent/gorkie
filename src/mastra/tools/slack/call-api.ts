@@ -1,13 +1,12 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { slack } from '../../chat/client';
+import { channelContext } from '../../lib/context';
 import { input, optionalCursor, output } from '../../types/tools/index';
 import { getSandbox } from '../../workspace';
 import { p } from '../../workspace/path';
-import { joinChannel } from './utils';
+import { assertReadableChannel, joinChannel } from './utils';
 
-// Slack read methods end in one of these segments. Everything else mutates the
-// workspace and stays behind the dedicated write tools.
 const readMethod =
   /^[a-z][\w.]*\.(accessLogs|all|billableInfo|context|conversations|counts|files|get|getPresence|history|identity|info|integrationLogs|list|lookup|lookupByEmail|members|messages|replies|test)$/;
 
@@ -45,7 +44,7 @@ export const callSlackApiTool = createTool({
 
 Read methods only. Use this tool for one-off reads that dedicated tools do not expose. For pagination, filtering, joining, deduplication, sorting, counting, or aggregation across several calls, use Slack code mode instead. Allowed read segments are accessLogs, all, billableInfo, context, conversations, counts, files, get, getPresence, history, identity, info, integrationLogs, list, lookup, lookupByEmail, members, messages, replies, and test. Anything that posts, edits, deletes, joins, invites, or uploads is rejected. Use post_message, react, and upload_file for those.
 
-Pass params exactly as Slack documents them, with raw ids (C..., U..., timestamps). slack:-prefixed ids are converted for you: slack:C123 becomes C123, and slack:C123:1712345678.000100 becomes C123, or the timestamp for ts, thread_ts, oldest, and latest. Public channels are joined automatically for conversations.* calls.
+Pass params exactly as Slack documents them, with raw ids (C..., U..., timestamps). slack:-prefixed ids are converted for you: slack:C123 becomes C123, and slack:C123:1712345678.000100 becomes C123, or the timestamp for ts, thread_ts, oldest, and latest. Public channels are joined automatically for conversations.* calls. Any params.channel must be the current conversation or a public channel; reading a DM or private channel gorkie is not currently in fails.
 
 Responses are unshaped and can be large, so the full JSON is always written to a file in the thread sandbox and only a capped preview comes back. Read the file with read_file, or reduce it in Slack code mode, when the preview is truncated. Paginate with nextCursor. If truncated is true and no path came back, the sandbox was unavailable and the rest of the response was dropped, so narrow the request and call again.`,
   inputSchema: input({
@@ -82,6 +81,13 @@ Responses are unshaped and can be large, so the full JSON is always written to a
     }
 
     const args = slackParams(params ?? {});
+    if (typeof args.channel === 'string') {
+      const ctx = channelContext(context?.requestContext);
+      await assertReadableChannel({
+        channelId: args.channel,
+        currentThreadId: ctx.threadId,
+      });
+    }
     if (
       method.startsWith('conversations.') &&
       typeof args.channel === 'string'

@@ -1,6 +1,9 @@
-This project is a customizable AI assistant for Slack. It uses
-Bun, TypeScript, Mastra channels, Chat SDK's Slack adapter in Socket Mode, E2B
-sandboxes, Postgres, and Mastra observability.
+# gorkie
+
+This project is a customizable AI assistant for Slack, built on Bun,
+TypeScript, Mastra channels, Chat SDK's Slack adapter in Socket Mode, E2B
+sandboxes, Postgres, and Mastra observability (local DuckDB plus, when
+configured, Mastra Platform).
 
 ## CRITICAL: Load the `mastra` skill first
 
@@ -9,6 +12,14 @@ Load the `mastra` skill BEFORE any Mastra work, and read the embedded docs/sourc
 ## Setup: use the `wizard` skill
 
 If a person asks how to set up the project, load the `wizard` skill and generate a wizard tailored to their needs (services to configure, where state lives, optional integrations, whether to commit the script).
+
+## TODO
+
+`TODO.md` is the source of truth for outstanding requests so nothing is forgotten.
+
+- When the user asks for anything, small or large, add it to `TODO.md` immediately, in the right group.
+- Tick an item the moment it's done, then remove ticked items once the user has had a chance to see they're done.
+- Before saying you're finished, re-read `TODO.md` and confirm nothing asked is left unlogged.
 
 ## Mental Model
 
@@ -20,8 +31,14 @@ The agent brain runs on the host. Code execution runs in a per-thread **E2B** sa
 
 Storage is **Postgres** for agent memory and channel state. Long-term memory uses
 thread-scoped **Observational Memory**.
-Observability traces are stored in local DuckDB through
-`MastraStorageExporter`.
+Observability traces are stored in a local DuckDB file (`observability.duckdb`
+at the repo root, wired via `MastraStorageExporter` on a `MastraCompositeStore`
+domain override in `src/mastra/index.ts`) and, since `MASTRA_PLATFORM_ACCESS_TOKEN`
+and `MASTRA_PROJECT_ID` are required, also exported to Mastra Platform via
+`MastraPlatformExporter`. DuckDB is single-writer, so a running `mastra
+dev`/`mastra start` holds the lock; query it read-only while the server is
+stopped, or use `mastra api trace ...` against whatever instance the user
+already has running instead (see Boundaries).
 
 ## Boundaries
 
