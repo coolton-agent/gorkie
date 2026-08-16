@@ -1,4 +1,5 @@
 import { logger } from '../lib/logger';
+import { registerAppHome } from './app-home';
 import { slack } from './client';
 import { content } from './content';
 import { chat } from './instance';
@@ -29,13 +30,7 @@ export function registerEvents(): void {
     setStarters({ channelId: event.channelId, threadTs: event.threadTs })
   );
 
-  bot.onAppHomeOpened((event) =>
-    slack
-      .publishHomeView(event.userId, content.home)
-      .catch((error: unknown) =>
-        logger.error('[events] publishHomeView failed', { error })
-      )
-  );
+  registerAppHome();
 
   bot.onAction('opt_in_accept', acceptOptIn);
 }

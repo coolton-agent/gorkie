@@ -13,7 +13,9 @@ import {
 } from '../chat/handlers';
 import { typingStatus } from '../chat/typing-status';
 import { agent as config } from '../config';
+import { channelContext } from '../lib/context';
 import { defaultErrorProcessors } from '../lib/error-handling';
+import { getUserSettings } from '../lib/settings';
 import { stepCountIs, toolCall } from '../lib/tools';
 import { delegatedTools } from '../processors/delegated-tools';
 import { sandbox } from '../processors/sandbox';
@@ -32,10 +34,23 @@ import { researchAgent } from './research';
 const orchestrator = new Agent({
   id: config.id,
   name: 'Orchestrator',
-  instructions: ({ requestContext }) => [
-    ...instructions(requestContext),
-    { role: 'system', content: slackCodeModePrompt },
-  ],
+  instructions: async ({ requestContext }) => {
+    const messages = [
+      ...instructions(requestContext),
+      { role: 'system' as const, content: slackCodeModePrompt },
+    ];
+    const { userId } = channelContext(requestContext);
+    const userInstructions = userId
+      ? (await getUserSettings(userId)).instructions
+      : undefined;
+    if (userInstructions) {
+      messages.push({
+        role: 'system' as const,
+        content: `<user_instructions>\n${userInstructions}\n</user_instructions>`,
+      });
+    }
+    return messages;
+  },
   model: orchestratorModel,
   errorProcessors: defaultErrorProcessors(),
   maxProcessorRetries: 2,

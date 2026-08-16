@@ -7,7 +7,6 @@ import {
   Observability,
   SensitiveDataFilter,
 } from '@mastra/observability';
-import { PostgresStore } from '@mastra/pg';
 import { env } from '@/env';
 import { exploreAgent as explore } from './agents/explore';
 import orchestrator from './agents/orchestrator';
@@ -15,7 +14,9 @@ import { researchAgent as research } from './agents/research';
 import { summarizer } from './agents/summarizer';
 import { registerEvents } from './chat/events';
 import { setChat } from './chat/instance';
+import { setMastra } from './chat/mastra-instance';
 import { buildAllowlist } from './lib/allowed-users';
+import { postgresStore } from './lib/db';
 import { logger } from './lib/logger';
 
 process.on('unhandledRejection', (err: unknown) => {
@@ -44,10 +45,7 @@ export const mastra = new Mastra({
   },
   storage: new MastraCompositeStore({
     id: 'composite-storage',
-    default: new PostgresStore({
-      id: 'main-storage',
-      connectionString: env.DATABASE_URL,
-    }),
+    default: postgresStore,
     domains: {
       observability: await new DuckDBStore({
         path: './observability.duckdb',
@@ -73,6 +71,7 @@ export const mastra = new Mastra({
 });
 
 await mastra.startWorkers();
+setMastra(mastra);
 
 orchestrator
   .getChannels()
