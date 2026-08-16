@@ -5,17 +5,25 @@ import type { McpServerConfig } from '../types';
 
 const clients = new Map<string, { client: MCPClient; key: string }>();
 
-async function resolveClient(
-  userId: string,
-  servers: McpServerConfig[]
-): Promise<MCPClient> {
+async function resolveClient({
+  userId,
+  servers,
+}: {
+  userId: string;
+  servers: McpServerConfig[];
+}): Promise<MCPClient> {
   const key = JSON.stringify(servers);
   const cached = clients.get(userId);
   if (cached && cached.key === key) {
     return cached.client;
   }
   if (cached) {
-    await cached.client.disconnect().catch(() => undefined);
+    await cached.client.disconnect().catch((error: unknown) => {
+      logger.debug('[mcp] failed to disconnect stale client', {
+        error,
+        userId,
+      });
+    });
   }
 
   const client = new MCPClient({
@@ -53,7 +61,7 @@ export async function userMcpTools(
     return {};
   }
   try {
-    const client = await resolveClient(userId, mcpServers);
+    const client = await resolveClient({ userId, servers: mcpServers });
     return await client.listTools();
   } catch (error) {
     logger.debug('[mcp] failed to list user servers', { error, userId });

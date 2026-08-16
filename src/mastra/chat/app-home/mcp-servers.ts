@@ -102,8 +102,11 @@ export function registerMcpServers(): void {
       return;
     }
     const { mcpServers } = await getUserSettings(event.user.userId);
-    await setUserSettings(event.user.userId, {
-      mcpServers: mcpServers?.filter((server) => server.name !== name),
+    await setUserSettings({
+      userId: event.user.userId,
+      patch: {
+        mcpServers: mcpServers?.filter((server) => server.name !== name),
+      },
     });
     await publishHome(event.user.userId);
   });
@@ -121,8 +124,11 @@ export function registerMcpServers(): void {
     const withoutSameName = (mcpServers ?? []).filter(
       (server) => server.name !== parsed.data.name
     );
-    await setUserSettings(event.user.userId, {
-      mcpServers: [...withoutSameName, parsed.data].slice(-MAX_SERVERS),
+    await setUserSettings({
+      userId: event.user.userId,
+      patch: {
+        mcpServers: [...withoutSameName, parsed.data].slice(-MAX_SERVERS),
+      },
     });
     await publishHome(event.user.userId);
   });

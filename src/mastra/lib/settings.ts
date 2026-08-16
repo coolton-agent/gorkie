@@ -48,10 +48,13 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
   return row ? userSettingsSchema.parse(row.settings) : {};
 }
 
-export async function setUserSettings(
-  userId: string,
-  patch: UserSettings
-): Promise<UserSettings> {
+export async function setUserSettings({
+  userId,
+  patch,
+}: {
+  userId: string;
+  patch: UserSettings;
+}): Promise<UserSettings> {
   await ensureTable();
   const current = await getUserSettings(userId);
   const next = userSettingsSchema.parse({ ...current, ...patch });

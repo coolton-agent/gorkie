@@ -90,14 +90,18 @@ export function registerCustomInstructions(): void {
   });
 
   bot.onAction(CLEAR_ACTION_ID, async (event) => {
-    await setUserSettings(event.user.userId, { instructions: undefined });
+    await setUserSettings({
+      userId: event.user.userId,
+      patch: { instructions: undefined },
+    });
     await publishHome(event.user.userId);
   });
 
   bot.onModalSubmit(MODAL_CALLBACK_ID, async (event) => {
     const instructions = event.values.instructions?.trim();
-    await setUserSettings(event.user.userId, {
-      instructions: instructions || undefined,
+    await setUserSettings({
+      userId: event.user.userId,
+      patch: { instructions: instructions || undefined },
     });
     await publishHome(event.user.userId);
   });
