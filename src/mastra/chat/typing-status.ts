@@ -32,6 +32,12 @@ function fileName(path: string): string {
 }
 
 const statuses: Record<string, (args: Args) => string> = {
+  call_slack_api: (args) => {
+    const method = str(args, 'method');
+    return method
+      ? fit('is calling the Slack API: ', method, '…')
+      : 'is calling the Slack API…';
+  },
   create_canvas: (args) => {
     const title = str(args, 'title');
     return title
