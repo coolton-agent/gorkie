@@ -5,8 +5,9 @@ import { chat } from '../instance';
 import { getMastra } from '../mastra-instance';
 import { publishHome } from './view';
 
-const CANCEL_ACTION_ID = 'app_home_cancel_task';
-const PREVIEW_LENGTH = 60;
+const ids = {
+  cancel: 'app_home_cancel_task',
+};
 
 export async function scheduledTasksBlocks(
   userId: string
@@ -38,9 +39,7 @@ export async function scheduledTasksBlocks(
   for (const task of tasks) {
     const title =
       task.name ??
-      (task.prompt.length > PREVIEW_LENGTH
-        ? `${task.prompt.slice(0, PREVIEW_LENGTH)}…`
-        : task.prompt);
+      (task.prompt.length > 60 ? `${task.prompt.slice(0, 60)}…` : task.prompt);
     const nextFire = Math.floor(task.nextFireAt / 1000);
     blocks.push({
       type: 'section',
@@ -51,7 +50,7 @@ export async function scheduledTasksBlocks(
       accessory: {
         type: 'button',
         text: { type: 'plain_text', text: 'Cancel' },
-        action_id: CANCEL_ACTION_ID,
+        action_id: ids.cancel,
         value: task.id,
         style: 'danger',
         confirm: {
@@ -71,7 +70,7 @@ export async function scheduledTasksBlocks(
 }
 
 export function registerScheduledTasks(): void {
-  chat().onAction(CANCEL_ACTION_ID, async (event) => {
+  chat().onAction(ids.cancel, async (event) => {
     const id = event.value;
     if (!id) {
       return;

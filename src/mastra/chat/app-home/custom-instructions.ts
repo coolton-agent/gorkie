@@ -3,17 +3,18 @@ import { getInstructions, setInstructions } from '../../db/queries/settings';
 import { chat } from '../instance';
 import { publishHome } from './view';
 
-const EDIT_ACTION_ID = 'app_home_edit_instructions';
-const CLEAR_ACTION_ID = 'app_home_clear_instructions';
-const MODAL_CALLBACK_ID = 'app_home_instructions_modal';
-const PREVIEW_LENGTH = 280;
+const ids = {
+  clear: 'app_home_clear_instructions',
+  edit: 'app_home_edit_instructions',
+  modal: 'app_home_instructions_modal',
+};
 
 export function customInstructionsBlocks(
   instructions: string | undefined
 ): Record<string, unknown>[] {
   const preview =
-    instructions && instructions.length > PREVIEW_LENGTH
-      ? `${instructions.slice(0, PREVIEW_LENGTH)}…`
+    instructions && instructions.length > 120
+      ? `${instructions.slice(0, 120)}…`
       : instructions;
 
   return [
@@ -36,14 +37,14 @@ export function customInstructionsBlocks(
         {
           type: 'button',
           text: { type: 'plain_text', text: instructions ? 'Edit' : 'Add' },
-          action_id: EDIT_ACTION_ID,
+          action_id: ids.edit,
         },
         ...(instructions
           ? [
               {
                 type: 'button',
                 text: { type: 'plain_text', text: 'Clear' },
-                action_id: CLEAR_ACTION_ID,
+                action_id: ids.clear,
                 style: 'danger',
                 confirm: {
                   title: { type: 'plain_text', text: 'Clear instructions?' },
@@ -66,11 +67,11 @@ export function customInstructionsBlocks(
 export function registerCustomInstructions(): void {
   const bot = chat();
 
-  bot.onAction(EDIT_ACTION_ID, async (event) => {
+  bot.onAction(ids.edit, async (event) => {
     const instructions = await getInstructions(event.user.userId);
     await event.openModal(
       Modal({
-        callbackId: MODAL_CALLBACK_ID,
+        callbackId: ids.modal,
         title: 'Custom Instructions',
         submitLabel: 'Save',
         children: [
@@ -88,7 +89,7 @@ export function registerCustomInstructions(): void {
     );
   });
 
-  bot.onAction(CLEAR_ACTION_ID, async (event) => {
+  bot.onAction(ids.clear, async (event) => {
     await setInstructions({
       userId: event.user.userId,
       instructions: undefined,
@@ -96,7 +97,7 @@ export function registerCustomInstructions(): void {
     await publishHome(event.user.userId);
   });
 
-  bot.onModalSubmit(MODAL_CALLBACK_ID, async (event) => {
+  bot.onModalSubmit(ids.modal, async (event) => {
     const instructions = event.values.instructions?.trim();
     await setInstructions({
       userId: event.user.userId,

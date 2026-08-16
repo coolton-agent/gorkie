@@ -1,18 +1,17 @@
-import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import type { ModelWithRetries } from '@mastra/core/agent';
 import { env } from '@/env';
 
-export const hackclub = createOpenAICompatible({
-  name: 'hackclub',
-  baseURL: 'https://ai.hackclub.com/proxy/v1',
-  apiKey: env.HACKCLUB_API_KEY,
-});
+function hackclub(modelId: string) {
+  return {
+    id: `openrouter/${modelId}` as const,
+    url: 'https://ai.hackclub.com/proxy/v1',
+    apiKey: env.HACKCLUB_API_KEY,
+  };
+}
 
-export const opencode = createOpenAICompatible({
-  name: 'opencode-go',
-  baseURL: 'https://opencode.ai/zen/go/v1',
-  apiKey: env.OPENCODE_API_KEY,
-});
+function opencode(modelId: string) {
+  return `opencode-go/${modelId}` as const;
+}
 
 export const orchestrator: ModelWithRetries[] = [
   { model: hackclub('openai/gpt-5.6-luna'), maxRetries: 3 },

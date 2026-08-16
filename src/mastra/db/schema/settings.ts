@@ -19,4 +19,13 @@ export async function createUserSettingsTable(): Promise<void> {
       col.notNull().defaultTo(sql`now()`)
     )
     .execute();
+
+  // Older deploys had a jsonb `settings` blob instead of a plain
+  // `instructions` column; both sides are idempotent so this is safe
+  // to run every boot regardless of which shape the table already has.
+  await db.schema
+    .alterTable('user_settings')
+    .addColumn('instructions', 'text', (col) => col.ifNotExists())
+    .dropColumn('settings', (col) => col.ifExists())
+    .execute();
 }

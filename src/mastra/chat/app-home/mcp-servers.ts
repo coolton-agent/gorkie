@@ -8,9 +8,11 @@ import { type MCPServerConfig, mcpServerSchema } from '../../types';
 import { chat } from '../instance';
 import { publishHome } from './view';
 
-const ADD_ACTION_ID = 'app_home_add_mcp_server';
-const REMOVE_ACTION_ID = 'app_home_remove_mcp_server';
-const MODAL_CALLBACK_ID = 'app_home_mcp_server_modal';
+const ids = {
+  add: 'app_home_add_mcp_server',
+  modal: 'app_home_mcp_server_modal',
+  remove: 'app_home_remove_mcp_server',
+};
 const MAX_SERVERS = 10;
 
 export function mcpServersBlocks(
@@ -36,7 +38,7 @@ export function mcpServersBlocks(
       accessory: {
         type: 'button',
         text: { type: 'plain_text', text: 'Remove' },
-        action_id: REMOVE_ACTION_ID,
+        action_id: ids.remove,
         value: server.name,
         style: 'danger',
       },
@@ -47,7 +49,7 @@ export function mcpServersBlocks(
         {
           type: 'button',
           text: { type: 'plain_text', text: 'Add server' },
-          action_id: ADD_ACTION_ID,
+          action_id: ids.add,
         },
       ],
     },
@@ -58,14 +60,14 @@ export function mcpServersBlocks(
 export function registerMCPServers(): void {
   const bot = chat();
 
-  bot.onAction(ADD_ACTION_ID, async (event) => {
+  bot.onAction(ids.add, async (event) => {
     const servers = await listMCPServers(event.user.userId);
     if (servers.length >= MAX_SERVERS) {
       return;
     }
     await event.openModal(
       Modal({
-        callbackId: MODAL_CALLBACK_ID,
+        callbackId: ids.modal,
         title: 'Add MCP Server',
         submitLabel: 'Add',
         children: [
@@ -92,7 +94,7 @@ export function registerMCPServers(): void {
     );
   });
 
-  bot.onAction(REMOVE_ACTION_ID, async (event) => {
+  bot.onAction(ids.remove, async (event) => {
     const name = event.value;
     if (!name) {
       return;
@@ -101,7 +103,7 @@ export function registerMCPServers(): void {
     await publishHome(event.user.userId);
   });
 
-  bot.onModalSubmit(MODAL_CALLBACK_ID, async (event) => {
+  bot.onModalSubmit(ids.modal, async (event) => {
     const parsed = mcpServerSchema.safeParse({
       name: event.values.name?.trim(),
       url: event.values.url?.trim(),
