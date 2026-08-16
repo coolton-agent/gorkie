@@ -1,4 +1,5 @@
 <div align="center">
+  <img alt="gorkie banner" src="./.github/banner.png" />
   <h1>gorkie</h1>
   <p>An AI assistant for Slack, built on Mastra.</p>
 </div>
@@ -156,7 +157,7 @@ bun run check:spelling
 
 ## License
 
-[MIT](./LICENSE)
+[AGPL-3.0](./LICENSE)
 
 [mastra]: https://mastra.ai
 [channels]: https://mastra.ai/docs/channels/overview

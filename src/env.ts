@@ -17,6 +17,9 @@ export const env = createEnv({
 
     DATABASE_URL: z.url(),
 
+    MASTRA_PLATFORM_ACCESS_TOKEN: z.string().min(1),
+    MASTRA_PROJECT_ID: z.string().min(1),
+
     E2B_API_KEY: z.string().min(1),
 
     EXA_API_KEY: z.string().min(1),

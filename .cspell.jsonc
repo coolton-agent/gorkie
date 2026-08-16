@@ -12,9 +12,11 @@
     "workspace",
     ".claude",
     ".agents",
-    "patches"
+    "patches",
+    "LICENSE"
   ],
   "words": [
+    "AGPL",
     "agentmail",
     "AGENTMAIL",
     "anirudh",
@@ -26,6 +28,7 @@
     "backgrounding",
     "bearertoken",
     "backprop",
+    "borkification",
     "branchiness",
     "bunx",
     "chonky",
@@ -41,6 +44,7 @@
     "deepseek",
     "Devarsh",
     "destructures",
+    "desynced",
     "doxx",
     "duckdb",
     "EMMWR",
@@ -141,6 +145,7 @@
     "VUSAEB",
     "wakeup",
     "wakeups",
+    "wayfinder",
     "WNAR",
     "XJNAKXUS",
     "xapp",
