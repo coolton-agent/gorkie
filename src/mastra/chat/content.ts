@@ -32,14 +32,6 @@ export const content = {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: "I don't just answer questions, I actually do the work: write code, dig through Slack, build files, whatever the task needs. Message me directly, or @mention me in any channel.",
-        },
-      },
-      { type: 'divider' },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
           text: 'I can search the web and Slack, write and run code, browse the web, manage scheduled tasks, and work with canvases and files.',
         },
       },

@@ -22,6 +22,10 @@ Keep this file limited to unresolved work that belongs in the reusable template.
 - [ ] `slack` (code mode) typing status is a flat "is working in Slack…" regardless of what the generated code actually does. Its input is `{ code: string }` (arbitrary TypeScript calling `external_*` functions), so there's no single field to show like `call_slack_api`'s `method`. Cheap fix: regex the `code` arg for `external_([a-zA-Z0-9_]+)\(` calls and list the distinct function names in the status, same non-invasive pattern already used for `execute_command`'s `command` and `grep`'s `pattern`.
 - [ ] Parallel `upload_file` calls can interleave file and comment ordering across concurrent uploads (the `chat` package uploads then posts text sequentially per call, with no cross-call ordering guarantee).
 
+## Ideas
+
+- [ ] Skills support: let users add skills from skills.sh, plus custom skills (upload a ZIP, or import from a GitHub gist). Exploratory, not yet scoped.
+
 ## Restore from main
 
-- [ ] Per-user custom instructions box. Main read a `<user_instructions>` block per message and let each user's saved tone/persona/style override the default personality; borkification has no implementation of this at all (only referenced in passing in `prompts/guardrails.ts`). Ties into the in-repo App Home wayfinder plan (`.wayfinder/app-home/map.md`) for where the instructions themselves would be entered and stored. Make sure it doesn't mess with cache!
+- [x] Per-user custom instructions box. Main read a `<user_instructions>` block per message and let each user's saved tone/persona/style override the default personality; borkification has no implementation of this at all (only referenced in passing in `prompts/guardrails.ts`). Ties into the in-repo App Home wayfinder plan (`.wayfinder/app-home/map.md`) for where the instructions themselves would be entered and stored. Make sure it doesn't mess with cache!
