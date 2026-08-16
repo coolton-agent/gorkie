@@ -1,5 +1,5 @@
 import { MCPClient } from '@mastra/mcp';
-import { listMCPServers } from '../db/queries/mcps';
+import { listMCPServers, setMCPServerError } from '../db/queries/mcps';
 import { logger } from '../lib/logger';
 import type { MCPServerConfig } from '../types';
 
@@ -26,23 +26,35 @@ async function buildClient({
   return new MCPClient({
     id: `user-mcp-${userId}`,
     servers: Object.fromEntries(
-      servers.map((server) => {
-        const url = new URL(server.url);
+      servers.flatMap((server) => {
+        let url: URL;
+        try {
+          url = new URL(server.url);
+        } catch (error) {
+          logger.debug('[mcp] skipping server with invalid url', {
+            error,
+            name: server.name,
+            userId,
+          });
+          return [];
+        }
         return [
-          server.name,
-          {
-            url,
-            requireToolApproval: true,
-            allowedHosts: [url.host],
-            ...(server.token
-              ? {
-                  requestInit: {
-                    headers: { Authorization: `Bearer ${server.token}` },
-                  },
-                }
-              : {}),
-          },
-        ];
+          [
+            server.name,
+            {
+              url,
+              requireToolApproval: true,
+              allowedHosts: [url.host],
+              ...(server.token
+                ? {
+                    requestInit: {
+                      headers: { Authorization: `Bearer ${server.token}` },
+                    },
+                  }
+                : {}),
+            },
+          ],
+        ] as const;
       })
     ),
   });
@@ -92,10 +104,56 @@ function resolveClient({
   return promise;
 }
 
-// User-added MCP servers are arbitrary, unvetted third parties, so every tool
-// from them requires approval before it runs (requireToolApproval above) and
-// a connection failure never blocks the turn, it just means one user loses
-// their extra tools for that turn.
+export async function findMCPConnectionError({
+  userId,
+  server,
+}: {
+  userId: string;
+  server: MCPServerConfig;
+}): Promise<string | undefined> {
+  const url = new URL(server.url);
+  const probe = new MCPClient({
+    id: `mcp-probe-${userId}-${server.name}`,
+    servers: {
+      [server.name]: {
+        url,
+        connectTimeout: 5000,
+        allowedHosts: [url.host],
+        ...(server.token
+          ? {
+              requestInit: {
+                headers: { Authorization: `Bearer ${server.token}` },
+              },
+            }
+          : {}),
+      },
+    },
+  });
+  try {
+    const { errors } = await probe.listToolsWithErrors();
+    const error = errors[server.name];
+    if (error) {
+      logger.debug('[mcp] connection check failed', {
+        error,
+        name: server.name,
+        userId,
+      });
+      return "Couldn't connect to this server. Check the URL and token.";
+    }
+  } catch (error) {
+    logger.debug('[mcp] connection check failed', {
+      error,
+      name: server.name,
+      userId,
+    });
+    return "Couldn't connect to this server. Check the URL and token.";
+  } finally {
+    await probe.disconnect().catch(() => {
+      // best-effort cleanup of the throwaway probe client
+    });
+  }
+}
+
 export async function userMCPTools(
   userId: string
 ): Promise<Record<string, unknown>> {
@@ -106,7 +164,18 @@ export async function userMCPTools(
       return {};
     }
     const client = await resolveClient({ userId, servers });
-    return await client.listTools();
+    const { tools, errors } = await client.listToolsWithErrors();
+
+    await Promise.all(
+      servers.map((server) =>
+        setMCPServerError({
+          userId,
+          name: server.name,
+          error: errors[server.name] ?? null,
+        })
+      )
+    );
+    return tools;
   } catch (error) {
     logger.debug('[mcp] failed to list user servers', { error, userId });
     return {};

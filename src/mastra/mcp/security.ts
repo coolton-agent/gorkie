@@ -5,6 +5,12 @@ function isPublicAddress(address: string): boolean {
   return ipaddr.process(address).range() === 'unicast';
 }
 
+function unwrapIPv6(hostname: string): string {
+  return hostname.startsWith('[') && hostname.endsWith(']')
+    ? hostname.slice(1, -1)
+    : hostname;
+}
+
 export async function findMCPUrlError(
   rawUrl: string
 ): Promise<string | undefined> {
@@ -17,7 +23,7 @@ export async function findMCPUrlError(
   if (url.protocol !== 'https:') {
     return 'Only https:// server URLs are allowed.';
   }
-  const { hostname } = url;
+  const hostname = unwrapIPv6(url.hostname);
   if (ipaddr.isValid(hostname)) {
     return isPublicAddress(hostname)
       ? undefined

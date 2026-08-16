@@ -13,11 +13,12 @@ import {
 } from '../chat/handlers';
 import { status } from '../chat/status';
 import { agent as config } from '../config';
+import { listMCPServers } from '../db/queries/mcps';
 import { getInstructions } from '../db/queries/settings';
 import { channelContext } from '../lib/context';
 import { defaultErrorProcessors } from '../lib/error-handling';
 import { logger } from '../lib/logger';
-import { inconclusiveFinish, stepCountIs, toolCall } from '../lib/tools';
+import { stepCountIs, toolCall } from '../lib/tools';
 import { userMCPTools } from '../mcp/user-servers';
 import { clearStatus } from '../processors/clear-status';
 import { delegatedTools } from '../processors/delegated-tools';
@@ -57,6 +58,24 @@ const orchestrator = new Agent({
         content: `<user_instructions>\n${userInstructions}\n</user_instructions>`,
       });
     }
+    const mcpServers = userId
+      ? await listMCPServers(userId).catch((error: unknown) => {
+          logger.debug('[orchestrator] failed to load mcp server status', {
+            error,
+            userId,
+          });
+          return [];
+        })
+      : [];
+    const failedServers = mcpServers
+      .filter((server) => server.lastError)
+      .map((server) => server.name);
+    if (failedServers.length > 0) {
+      messages.push({
+        role: 'system' as const,
+        content: `<mcp_status>The user's MCP server(s) ${failedServers.join(', ')} failed to connect. If they ask about missing tools or the request calls for one of these servers, mention casually that it looks down and they may want to check it in App Home.</mcp_status>`,
+      });
+    }
     return messages;
   },
   model: orchestratorModel,
@@ -73,11 +92,7 @@ const orchestrator = new Agent({
       messageFilter: ({ messages }) =>
         messages.filter(({ role }) => role === 'user').slice(-1),
     },
-    stopWhen: [
-      toolCall('wait'),
-      inconclusiveFinish(),
-      stepCountIs(config.maxSteps),
-    ],
+    stopWhen: [toolCall('wait'), stepCountIs(config.maxSteps)],
     autoResumeSuspendedTools: true,
   },
   workspace,

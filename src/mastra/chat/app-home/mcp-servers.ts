@@ -5,6 +5,7 @@ import {
   upsertMCPServer,
 } from '../../db/queries/mcps';
 import { findMCPUrlError } from '../../mcp/security';
+import { findMCPConnectionError } from '../../mcp/user-servers';
 import { type MCPServerConfig, mcpServerSchema } from '../../types';
 import { chat } from '../instance';
 
@@ -16,7 +17,7 @@ const ids = {
 const MAX_SERVERS = 10;
 
 export function mcpServersBlocks(
-  servers: MCPServerConfig[]
+  servers: (MCPServerConfig & { lastError?: string })[]
 ): Record<string, unknown>[] {
   return [
     {
@@ -34,7 +35,12 @@ export function mcpServersBlocks(
     },
     ...servers.map((server) => ({
       type: 'section',
-      text: { type: 'mrkdwn', text: `*${server.name}*\n${server.url}` },
+      text: {
+        type: 'mrkdwn',
+        text: server.lastError
+          ? `*${server.name}*\n${server.url}\n:warning: ${server.lastError}`
+          : `*${server.name}*\n${server.url}`,
+      },
       accessory: {
         type: 'button',
         text: { type: 'plain_text', text: 'Remove' },
@@ -89,7 +95,7 @@ export function registerMCPServers({
           }),
           TextInput({
             id: 'token',
-            label: 'Access token (if the server requires one)',
+            label: 'Access token',
             optional: true,
             maxLength: 2000,
           }),
@@ -126,6 +132,13 @@ export function registerMCPServers({
     const urlError = await findMCPUrlError(parsed.data.url);
     if (urlError) {
       return { action: 'errors' as const, errors: { url: urlError } };
+    }
+    const connectionError = await findMCPConnectionError({
+      userId: event.user.userId,
+      server: parsed.data,
+    });
+    if (connectionError) {
+      return { action: 'errors' as const, errors: { url: connectionError } };
     }
     const result = await upsertMCPServer({
       userId: event.user.userId,

@@ -6,9 +6,6 @@ import { customInstructionsBlocks } from './custom-instructions';
 import { mcpServersBlocks } from './mcp-servers';
 import { scheduledTasksBlocks } from './scheduled-tasks';
 
-// Slack's views.publish rejects a Home view with more than 100 blocks.
-const MAX_HOME_BLOCKS = 100;
-
 export async function buildHomeView(
   userId: string
 ): Promise<Record<string, unknown>> {
@@ -23,9 +20,10 @@ export async function buildHomeView(
     ...customInstructionsBlocks(instructions),
     ...mcpServersBlocks(mcpServers),
   ];
+  // Slack's views.publish rejects a Home view with more than 100 blocks.
   const scheduled = await scheduledTasksBlocks(
     userId,
-    MAX_HOME_BLOCKS - staticBlocks.length
+    100 - staticBlocks.length
   );
 
   return {

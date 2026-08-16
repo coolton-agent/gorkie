@@ -5,10 +5,10 @@ import { db } from '../client';
 
 export async function listMCPServers(
   userId: string
-): Promise<MCPServerConfig[]> {
+): Promise<(MCPServerConfig & { lastError?: string })[]> {
   const rows = await db
     .selectFrom('mcp_servers')
-    .select(['name', 'url', 'token'])
+    .select(['name', 'url', 'token', 'last_error'])
     .where('user_id', '=', rawId(userId))
     .orderBy('created_at', 'asc')
     .execute();
@@ -16,7 +16,25 @@ export async function listMCPServers(
     name: row.name,
     token: row.token ?? undefined,
     url: row.url,
+    lastError: row.last_error ?? undefined,
   }));
+}
+
+export async function setMCPServerError({
+  userId,
+  name,
+  error,
+}: {
+  userId: string;
+  name: string;
+  error: string | null;
+}): Promise<void> {
+  await db
+    .updateTable('mcp_servers')
+    .set({ last_error: error })
+    .where('user_id', '=', rawId(userId))
+    .where('name', '=', name)
+    .execute();
 }
 
 export async function upsertMCPServer({
@@ -51,9 +69,11 @@ export async function upsertMCPServer({
         user_id: id,
       })
       .onConflict((oc) =>
-        oc
-          .columns(['user_id', 'name'])
-          .doUpdateSet({ token: server.token ?? null, url: server.url })
+        oc.columns(['user_id', 'name']).doUpdateSet({
+          token: server.token ?? null,
+          url: server.url,
+          last_error: null,
+        })
       )
       .execute();
     return 'ok';
