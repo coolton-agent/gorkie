@@ -26,13 +26,13 @@ export const content = {
     blocks: [
       {
         type: 'header',
-        text: { type: 'plain_text', text: '👋 Your AI assistant' },
+        text: { type: 'plain_text', text: "👋 I'm gorkie" },
       },
       {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: "Message me directly here, or @mention me in any channel, and I'll help you get things done.",
+          text: "I don't just answer questions, I actually do the work: write code, dig through Slack, build files, whatever the task needs. Message me directly, or @mention me in any channel.",
         },
       },
       { type: 'divider' },
