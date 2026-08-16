@@ -6,6 +6,7 @@ import { grepTool } from './grep';
 import { scheduledTaskTools } from './scheduled-tasks';
 import { searchWebTool } from './search-web';
 import { slackTools } from './slack';
+import { uploadEmojiTool } from './upload-emoji';
 import { waitTool } from './wait';
 
 export const orchestratorTools = {
@@ -33,5 +34,6 @@ export const deferredTools = {
   list_channels: slackTools.list_channels,
   list_threads: slackTools.list_threads,
   generate_image: generateImageTool,
+  upload_emoji: uploadEmojiTool,
   ...canvasTools,
 };

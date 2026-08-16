@@ -23,6 +23,7 @@ export const env = createEnv({
 
     AGENTMAIL_API_KEY: z.string().min(1).optional(),
     GITHUB_TOKEN: z.string().min(1).optional(),
+    EMOJI_PROXY_TOKEN: z.string().min(1).optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

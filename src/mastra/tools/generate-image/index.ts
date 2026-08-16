@@ -1,7 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { generateImage } from 'ai';
 import { z } from 'zod';
-import { images } from '../../providers';
+import { hackclub, images } from '../../providers';
 import { input, output } from '../../types/tools/index';
 import { getSandbox } from '../../workspace';
 import { p } from '../../workspace/path';
@@ -58,12 +58,16 @@ export const generateImageTool = createTool({
     const generated =
       referenceImages && referenceImages.length > 0
         ? await editImages({ prompt, referenceImages, sandbox })
-        : (await generateImage({ model: images, prompt, n })).images.map(
-            (image) => ({
-              data: Buffer.from(image.uint8Array),
-              mediaType: image.mediaType,
+        : (
+            await generateImage({
+              model: hackclub.imageModel(images.model),
+              prompt,
+              n,
             })
-          );
+          ).images.map((image) => ({
+            data: Buffer.from(image.uint8Array),
+            mediaType: image.mediaType,
+          }));
 
     const dir = p('downloads');
     await sandbox.retryOnDead(() => sandbox.e2b.files.makeDir(dir));

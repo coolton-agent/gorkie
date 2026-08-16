@@ -177,6 +177,12 @@ const statuses: Record<string, (args: Args) => string> = {
       ? fit('is summarizing: ', instructions, '…')
       : 'is summarizing the thread…';
   },
+  upload_emoji: (args) => {
+    const name = str(args, 'name');
+    return name
+      ? fit('is adding the :', name, ': emoji…')
+      : 'is adding an emoji…';
+  },
   upload_file: () => 'is uploading a file…',
   wait: (args) => {
     const reason = str(args, 'reason');

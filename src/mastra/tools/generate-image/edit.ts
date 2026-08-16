@@ -1,7 +1,7 @@
 import { detectMediaType } from '@ai-sdk/provider-utils';
 import type { E2BSandbox } from '@mastra/e2b';
 import { env } from '@/env';
-import { hackclubBaseUrl, images } from '../../providers';
+import { images } from '../../providers';
 
 const DATA_URI = /^data:([^;,]+);base64,(.+)$/s;
 const MAX_REFERENCE_BYTES = 8 * 1024 * 1024;
@@ -43,14 +43,14 @@ export async function editImages({
     referenceImages.map((path) => readReference({ path, sandbox }))
   );
 
-  const response = await fetch(`${hackclubBaseUrl}/chat/completions`, {
+  const response = await fetch(`${images.baseURL}/chat/completions`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${env.HACKCLUB_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: images.modelId,
+      model: images.model,
       modalities: ['image', 'text'],
       messages: [
         {

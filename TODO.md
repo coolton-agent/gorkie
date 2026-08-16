@@ -35,10 +35,12 @@ Keep this file limited to unresolved work that belongs in the reusable template.
 - [ ] Replace the temporary Mastra media token-count patch when the fix ships upstream.
 - [ ] Refactor `tools/slack/call-api.ts` and the Slack code mode tool (`tools/code-mode/slack.ts`); the overlap between raw Slack Web API access and the wrapped Slack tools needs a cleaner boundary.
 - [ ] Add an `assertCanPostTo`-style destination restriction to `react.ts` (currently the only Slack write tool without one).
+- [ ] `execute_command`'s typing status shows the raw shell command. Wrap the built-in tool (disable it in `workspace/index.ts`'s tools config, add our own `execute_command` with an extra model-authored `description` field, delegate to `createWorkspaceTools()` per call like `code-mode/slack.ts` already does) so `typing-status.ts` can show a short human title instead.
 - [ ] Parallel `upload_file` calls can interleave file and comment ordering across concurrent uploads (the `chat` package uploads then posts text sequentially per call, with no cross-call ordering guarantee).
 
 ## Restore from main
 
+- [ ] Per-user custom instructions box. Main read a `<user_instructions>` block per message and let each user's saved tone/persona/style override the default personality; borkification has no implementation of this at all (only referenced in passing in `prompts/guardrails.ts`). Ties into the in-repo App Home wayfinder plan (`.wayfinder/app-home/map.md`) for where the instructions themselves would be entered and stored.
 - [ ] `mermaid` tool (renders diagrams via mermaid.ink) so the restored `mermaid-diagrams` skill is actually usable.
 - [ ] `schedule_reminder` tool for one-time DM reminders, distinct from the cron-based scheduled tasks.
 - [ ] `leave_channel` tool.
