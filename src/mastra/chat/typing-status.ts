@@ -202,6 +202,29 @@ const statuses: Record<string, (args: Args) => string> = {
   },
 };
 
+const delegationAgentIds = new Set(['research', 'explore']);
+
+function delegatedTool(
+  toolName: string
+): { agentId: string; childToolName: string } | undefined {
+  for (const agentId of delegationAgentIds) {
+    const prefix = `agent-${agentId}_`;
+    if (toolName.startsWith(prefix)) {
+      return { agentId, childToolName: toolName.slice(prefix.length) };
+    }
+  }
+}
+
+function splitNamespacedTool(
+  toolName: string
+): { server: string; tool: string } | undefined {
+  const index = toolName.indexOf('_');
+  if (index <= 0 || index >= toolName.length - 1) {
+    return;
+  }
+  return { server: toolName.slice(0, index), tool: toolName.slice(index + 1) };
+}
+
 export const typingStatus: TypingStatusFn = (chunk, context) => {
   if (chunk.type !== 'tool-call') {
     return defaultTypingStatus(chunk, context);
@@ -213,10 +236,33 @@ export const typingStatus: TypingStatusFn = (chunk, context) => {
   }
 
   const args = (chunk.payload.args as Args | undefined) ?? {};
-  const status = toolName.startsWith('agent-')
-    ? `is spawning a ${label(toolName.slice(6))} agent…`
-    : (statuses[toolName]?.(args) ??
-      `is using ${label(toolName).toLowerCase()}…`);
+  if (
+    toolName.startsWith('agent-') &&
+    delegationAgentIds.has(toolName.slice(6))
+  ) {
+    return truncate(
+      `is spawning a ${label(toolName.slice(6)).toLowerCase()} agent…`,
+      50
+    );
+  }
+
+  const delegated = delegatedTool(toolName);
+  if (delegated) {
+    return truncate(
+      `is using ${delegated.agentId}: ${label(delegated.childToolName).toLowerCase()}…`,
+      50
+    );
+  }
+
+  const known = statuses[toolName]?.(args);
+  if (known) {
+    return truncate(known, 50);
+  }
+
+  const namespaced = splitNamespacedTool(toolName);
+  const status = namespaced
+    ? `is using ${label(namespaced.server)}: ${label(namespaced.tool).toLowerCase()}…`
+    : `is using ${label(toolName).toLowerCase()}…`;
 
   return truncate(status, 50);
 };

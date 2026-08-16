@@ -22,6 +22,7 @@ Keep this file limited to unresolved work that belongs in the reusable template.
 - [ ] `slack` (code mode) typing status is a flat "is working in Slack…" regardless of what the generated code actually does. Its input is `{ code: string }` (arbitrary TypeScript calling `external_*` functions), so there's no single field to show like `call_slack_api`'s `method`. Cheap fix: regex the `code` arg for `external_([a-zA-Z0-9_]+)\(` calls and list the distinct function names in the status, same non-invasive pattern already used for `execute_command`'s `command` and `grep`'s `pattern`.
 - [ ] Parallel `upload_file` calls can interleave file and comment ordering across concurrent uploads (the `chat` package uploads then posts text sequentially per call, with no cross-call ordering guarantee).
 - [ ] A turn can finish generating cleanly (`finishReason: 'stop'`, real usage stats) but the reply never reaches Slack. Likely the streaming/posting pipeline (`chat-channel-render` output processor or the Slack post call itself) failing silently after generation succeeds, not a model/provider issue. Needs a concrete repro thread to trace further.
+- [ ] Streaming breaks on scheduled task tools. Needs a concrete repro to trace further.
 
 ## Ideas
 
