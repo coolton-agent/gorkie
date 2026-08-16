@@ -1,3 +1,6 @@
+import { cardToSlackBlocks } from '@chat-adapter/slack/blocks';
+import { Card, Section } from 'chat';
+
 export const content = {
   starters: [
     {
@@ -23,18 +26,19 @@ export const content = {
   ],
   home: {
     type: 'home',
-    blocks: [
-      {
-        type: 'header',
-        text: { type: 'plain_text', text: "I'm gorkie" },
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: 'I can search the web and Slack, write and run code, browse the web, manage scheduled tasks, and work with canvases and files.',
-        },
-      },
-    ],
+    blocks: cardToSlackBlocks(
+      Card({
+        title: "I'm gorkie",
+        children: [
+          Section([
+            {
+              type: 'text',
+              content:
+                'I can search the web and Slack, write and run code, browse the web, manage scheduled tasks, and work with canvases and files.',
+            },
+          ]),
+        ],
+      })
+    ),
   },
 };
