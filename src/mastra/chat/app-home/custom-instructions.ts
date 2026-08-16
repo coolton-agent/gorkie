@@ -82,7 +82,7 @@ export function registerCustomInstructions(): void {
               'e.g. keep replies short, always show code diffs, address me as vro',
             multiline: true,
             initialValue: settings.instructions,
-            maxLength: 4000,
+            maxLength: 2000,
           }),
         ],
       })
