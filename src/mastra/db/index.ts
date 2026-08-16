@@ -1,19 +1,8 @@
-import { PostgresStore } from '@mastra/pg';
-import { Kysely, PostgresDialect } from 'kysely';
-import { env } from '@/env';
-import type { MCPServersTable } from './schema/mcps';
-import type { UserSettingsTable } from './schema/settings';
+import { createMCPServersTable } from './schema/mcps';
+import { createUserSettingsTable } from './schema/settings';
 
-export const postgresStore = new PostgresStore({
-  id: 'main-storage',
-  connectionString: env.DATABASE_URL,
-});
+export { db, postgresStore } from './client';
 
-export interface Database {
-  mcp_servers: MCPServersTable;
-  user_settings: UserSettingsTable;
+export async function createTables(): Promise<void> {
+  await Promise.all([createMCPServersTable(), createUserSettingsTable()]);
 }
-
-export const db = new Kysely<Database>({
-  dialect: new PostgresDialect({ pool: postgresStore.pool }),
-});

@@ -1,5 +1,5 @@
 import { type ColumnType, type Selectable, sql } from 'kysely';
-import { db } from '../index';
+import { db } from '../client';
 
 export interface MCPServersTable {
   created_at: ColumnType<Date, Date | undefined, Date>;
@@ -11,24 +11,17 @@ export interface MCPServersTable {
 
 export type MCPServerRow = Selectable<MCPServersTable>;
 
-let tableReady: Promise<void> | undefined;
-
-export function ensureMCPServersTable(): Promise<void> {
-  const ready: Promise<void> =
-    tableReady ??
-    db.schema
-      .createTable('mcp_servers')
-      .ifNotExists()
-      .addColumn('user_id', 'text', (col) => col.notNull())
-      .addColumn('name', 'text', (col) => col.notNull())
-      .addColumn('url', 'text', (col) => col.notNull())
-      .addColumn('token', 'text')
-      .addColumn('created_at', 'timestamptz', (col) =>
-        col.notNull().defaultTo(sql`now()`)
-      )
-      .addPrimaryKeyConstraint('mcp_servers_pk', ['user_id', 'name'])
-      .execute()
-      .then(() => undefined);
-  tableReady = ready;
-  return ready;
+export async function createMCPServersTable(): Promise<void> {
+  await db.schema
+    .createTable('mcp_servers')
+    .ifNotExists()
+    .addColumn('user_id', 'text', (col) => col.notNull())
+    .addColumn('name', 'text', (col) => col.notNull())
+    .addColumn('url', 'text', (col) => col.notNull())
+    .addColumn('token', 'text')
+    .addColumn('created_at', 'timestamptz', (col) =>
+      col.notNull().defaultTo(sql`now()`)
+    )
+    .addPrimaryKeyConstraint('mcp_servers_pk', ['user_id', 'name'])
+    .execute();
 }

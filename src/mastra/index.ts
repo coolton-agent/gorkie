@@ -15,7 +15,7 @@ import { summarizer } from './agents/summarizer';
 import { registerEvents } from './chat/events';
 import { setChat } from './chat/instance';
 import { setMastra } from './chat/mastra-instance';
-import { postgresStore } from './db';
+import { createTables, postgresStore } from './db';
 import { buildAllowlist } from './lib/allowed-users';
 import { logger } from './lib/logger';
 
@@ -70,7 +70,7 @@ export const mastra = new Mastra({
   logger,
 });
 
-await mastra.startWorkers();
+await Promise.all([mastra.startWorkers(), createTables()]);
 setMastra(mastra);
 
 orchestrator
