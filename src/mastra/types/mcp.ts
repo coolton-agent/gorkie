@@ -13,4 +13,4 @@ export const mcpServerSchema = z.object({
   token: z.string().min(1).max(2000).optional(),
 });
 
-export type McpServerConfig = z.infer<typeof mcpServerSchema>;
+export type MCPServerConfig = z.infer<typeof mcpServerSchema>;

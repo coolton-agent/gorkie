@@ -1,4 +1,4 @@
-import { listMcpServers } from '../../db/queries/mcps';
+import { listMCPServers } from '../../db/queries/mcps';
 import { getInstructions } from '../../db/queries/settings';
 import { slack } from '../client';
 import { content } from '../content';
@@ -11,9 +11,10 @@ export async function buildHomeView(
 ): Promise<Record<string, unknown>> {
   const [instructions, mcpServers, scheduled] = await Promise.all([
     getInstructions(userId),
-    listMcpServers(userId),
+    listMCPServers(userId),
     scheduledTasksBlocks(userId),
   ]);
+
   return {
     type: 'home',
     blocks: [

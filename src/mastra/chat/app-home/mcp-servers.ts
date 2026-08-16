@@ -1,10 +1,10 @@
 import { Modal, TextInput } from 'chat';
 import {
-  listMcpServers,
-  removeMcpServer,
-  upsertMcpServer,
+  listMCPServers,
+  removeMCPServer,
+  upsertMCPServer,
 } from '../../db/queries/mcps';
-import { type McpServerConfig, mcpServerSchema } from '../../types';
+import { type MCPServerConfig, mcpServerSchema } from '../../types';
 import { chat } from '../instance';
 import { publishHome } from './view';
 
@@ -14,9 +14,9 @@ const MODAL_CALLBACK_ID = 'app_home_mcp_server_modal';
 const MAX_SERVERS = 10;
 
 export function mcpServersBlocks(
-  servers: McpServerConfig[]
+  servers: MCPServerConfig[]
 ): Record<string, unknown>[] {
-  const blocks: Record<string, unknown>[] = [
+  return [
     {
       type: 'header',
       text: { type: 'plain_text', text: 'MCP Servers' },
@@ -30,10 +30,7 @@ export function mcpServersBlocks(
           : '_No MCP servers connected. Add one to give gorkie extra tools, just for you._',
       },
     },
-  ];
-
-  for (const server of servers) {
-    blocks.push({
+    ...servers.map((server) => ({
       type: 'section',
       text: { type: 'mrkdwn', text: `*${server.name}*\n${server.url}` },
       accessory: {
@@ -43,29 +40,26 @@ export function mcpServersBlocks(
         value: server.name,
         style: 'danger',
       },
-    });
-  }
-
-  blocks.push({
-    type: 'actions',
-    elements: [
-      {
-        type: 'button',
-        text: { type: 'plain_text', text: 'Add server' },
-        action_id: ADD_ACTION_ID,
-      },
-    ],
-  });
-  blocks.push({ type: 'divider' });
-
-  return blocks;
+    })),
+    {
+      type: 'actions',
+      elements: [
+        {
+          type: 'button',
+          text: { type: 'plain_text', text: 'Add server' },
+          action_id: ADD_ACTION_ID,
+        },
+      ],
+    },
+    { type: 'divider' },
+  ];
 }
 
-export function registerMcpServers(): void {
+export function registerMCPServers(): void {
   const bot = chat();
 
   bot.onAction(ADD_ACTION_ID, async (event) => {
-    const servers = await listMcpServers(event.user.userId);
+    const servers = await listMCPServers(event.user.userId);
     if (servers.length >= MAX_SERVERS) {
       return;
     }
@@ -103,7 +97,7 @@ export function registerMcpServers(): void {
     if (!name) {
       return;
     }
-    await removeMcpServer({ userId: event.user.userId, name });
+    await removeMCPServer({ userId: event.user.userId, name });
     await publishHome(event.user.userId);
   });
 
@@ -116,14 +110,14 @@ export function registerMcpServers(): void {
     if (!parsed.success) {
       return;
     }
-    const servers = await listMcpServers(event.user.userId);
+    const servers = await listMCPServers(event.user.userId);
     const isNewServer = !servers.some(
       (server) => server.name === parsed.data.name
     );
     if (isNewServer && servers.length >= MAX_SERVERS) {
       return;
     }
-    await upsertMcpServer({ userId: event.user.userId, server: parsed.data });
+    await upsertMCPServer({ userId: event.user.userId, server: parsed.data });
     await publishHome(event.user.userId);
   });
 }

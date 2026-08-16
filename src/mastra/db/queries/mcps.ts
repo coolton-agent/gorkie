@@ -1,11 +1,12 @@
 import { rawId } from '../../lib/ids';
-import type { McpServerConfig } from '../../types';
-import { db, ensureTables } from '../index';
+import type { MCPServerConfig } from '../../types';
+import { db } from '../index';
+import { ensureMCPServersTable } from '../schema/mcps';
 
-export async function listMcpServers(
+export async function listMCPServers(
   userId: string
-): Promise<McpServerConfig[]> {
-  await ensureTables();
+): Promise<MCPServerConfig[]> {
+  await ensureMCPServersTable();
   const rows = await db
     .selectFrom('mcp_servers')
     .select(['name', 'url', 'token'])
@@ -19,14 +20,14 @@ export async function listMcpServers(
   }));
 }
 
-export async function upsertMcpServer({
+export async function upsertMCPServer({
   userId,
   server,
 }: {
   userId: string;
-  server: McpServerConfig;
+  server: MCPServerConfig;
 }): Promise<void> {
-  await ensureTables();
+  await ensureMCPServersTable();
   await db
     .insertInto('mcp_servers')
     .values({
@@ -43,14 +44,14 @@ export async function upsertMcpServer({
     .execute();
 }
 
-export async function removeMcpServer({
+export async function removeMCPServer({
   userId,
   name,
 }: {
   userId: string;
   name: string;
 }): Promise<void> {
-  await ensureTables();
+  await ensureMCPServersTable();
   await db
     .deleteFrom('mcp_servers')
     .where('user_id', '=', rawId(userId))

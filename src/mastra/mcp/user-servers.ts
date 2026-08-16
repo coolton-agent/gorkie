@@ -1,7 +1,7 @@
 import { MCPClient } from '@mastra/mcp';
-import { listMcpServers } from '../db/queries/mcps';
+import { listMCPServers } from '../db/queries/mcps';
 import { logger } from '../lib/logger';
-import type { McpServerConfig } from '../types';
+import type { MCPServerConfig } from '../types';
 
 const clients = new Map<string, { client: MCPClient; key: string }>();
 
@@ -10,7 +10,7 @@ async function resolveClient({
   servers,
 }: {
   userId: string;
-  servers: McpServerConfig[];
+  servers: MCPServerConfig[];
 }): Promise<MCPClient> {
   const key = JSON.stringify(servers);
   const cached = clients.get(userId);
@@ -53,10 +53,10 @@ async function resolveClient({
 // from them requires approval before it runs (requireToolApproval above) and
 // a connection failure never blocks the turn, it just means one user loses
 // their extra tools for that turn.
-export async function userMcpTools(
+export async function userMCPTools(
   userId: string
 ): Promise<Record<string, unknown>> {
-  const servers = await listMcpServers(userId);
+  const servers = await listMCPServers(userId);
   if (servers.length === 0) {
     return {};
   }

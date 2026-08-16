@@ -17,7 +17,7 @@ import { getInstructions } from '../db/queries/settings';
 import { channelContext } from '../lib/context';
 import { defaultErrorProcessors } from '../lib/error-handling';
 import { stepCountIs, toolCall } from '../lib/tools';
-import { userMcpTools } from '../mcp/user-servers';
+import { userMCPTools } from '../mcp/user-servers';
 import { delegatedTools } from '../processors/delegated-tools';
 import { sandbox } from '../processors/sandbox';
 import { moveToolImages } from '../processors/tool-media';
@@ -88,7 +88,7 @@ const orchestrator = new Agent({
   outputProcessors: [delegatedTools, sandbox],
   tools: async ({ requestContext }) => {
     const { userId } = channelContext(requestContext);
-    const userTools = userId ? await userMcpTools(userId) : {};
+    const userTools = userId ? await userMCPTools(userId) : {};
     return { ...orchestratorTools, ...userTools };
   },
   agents: {

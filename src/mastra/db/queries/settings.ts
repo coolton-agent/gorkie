@@ -1,10 +1,11 @@
 import { rawId } from '../../lib/ids';
-import { db, ensureTables } from '../index';
+import { db } from '../index';
+import { ensureUserSettingsTable } from '../schema/settings';
 
 export async function getInstructions(
   userId: string
 ): Promise<string | undefined> {
-  await ensureTables();
+  await ensureUserSettingsTable();
   const row = await db
     .selectFrom('user_settings')
     .select('instructions')
@@ -20,7 +21,7 @@ export async function setInstructions({
   userId: string;
   instructions: string | undefined;
 }): Promise<void> {
-  await ensureTables();
+  await ensureUserSettingsTable();
   const id = rawId(userId);
   const value = instructions ?? null;
   const now = new Date();
