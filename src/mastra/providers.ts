@@ -3,24 +3,26 @@ import type { LanguageModelV4 } from '@ai-sdk/provider';
 import type { ModelWithRetries } from '@mastra/core/agent';
 import { env } from '@/env';
 
-const hackClubProvider = createOpenAICompatible({
+export const hackclubBaseUrl = 'https://ai.hackclub.com/proxy/v1';
+
+const hackclubProvider = createOpenAICompatible({
   name: 'hackclub',
-  baseURL: 'https://ai.hackclub.com/proxy/v1',
+  baseURL: hackclubBaseUrl,
   apiKey: env.HACKCLUB_API_KEY,
 });
 
 function hackclub(model: string): LanguageModelV4 {
-  return hackClubProvider.chatModel(model);
+  return hackclubProvider.chatModel(model);
 }
 
-const openCodeProvider = createOpenAICompatible({
+const opencodeProvider = createOpenAICompatible({
   name: 'opencode-go',
   baseURL: 'https://opencode.ai/zen/go/v1',
   apiKey: env.OPENCODE_API_KEY,
 });
 
 function opencode(model: string): LanguageModelV4 {
-  return openCodeProvider.chatModel(model);
+  return opencodeProvider.chatModel(model);
 }
 
 export const orchestrator: ModelWithRetries[] = [
@@ -44,6 +46,6 @@ export const explorer: ModelWithRetries[] = [
   { model: opencode('gpt-5.6-luna'), maxRetries: 3 },
 ];
 
-export const images = hackClubProvider.imageModel(
+export const images = hackclubProvider.imageModel(
   'google/gemini-3.1-flash-image'
 );

@@ -39,7 +39,6 @@ Keep this file limited to unresolved work that belongs in the reusable template.
 
 ## Restore from main
 
-- [ ] Reference-image support for `generate_image` (edit an existing image, not just text-to-image). `generateImage()` already supports this natively via the object-form prompt (`{ text, images }`), no need to drop to `doGenerate()` directly. Blocked: confirmed live that `ai.hackclub.com/proxy/v1/images/edits` 404s, the proxy has no image-edit route. Needs either a provider that implements it or dropping the idea.
 - [ ] `mermaid` tool (renders diagrams via mermaid.ink) so the restored `mermaid-diagrams` skill is actually usable.
 - [ ] `schedule_reminder` tool for one-time DM reminders, distinct from the cron-based scheduled tasks.
 - [ ] `leave_channel` tool.
