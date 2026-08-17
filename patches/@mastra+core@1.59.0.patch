@@ -1,5 +1,5 @@
 diff --git a/dist/agent-BOdDHE12.cjs b/dist/agent-BOdDHE12.cjs
-index 6c7efc0..ea7ab03 100644
+index 6c7efc0..f900491 100644
 --- a/dist/agent-BOdDHE12.cjs
 +++ b/dist/agent-BOdDHE12.cjs
 @@ -13129,11 +13129,23 @@ var TokenLimiterProcessor = class TokenLimiterProcessor {
@@ -26,7 +26,29 @@ index 6c7efc0..ea7ab03 100644
  			} else tokenString += JSON.stringify(part);
  		}
  		overhead += TokenLimiterProcessor.TOKENS_PER_MESSAGE;
-@@ -24662,7 +24674,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -19308,7 +19320,12 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
+ 			continue;
+ 		}
+ 		if (chunk.type === "step-finish") {
+-			if (toolDisplay !== "grouped") await closeSession();
++			// A continued step (retry, in-place or fallback-model escalation) means
++			// the run is still alive: closing here would finalize the Slack message
++			// before the retry's output arrives. Mirrors ChatChannelOutputProcessor's
++			// own isContinued check for the same chunk type.
++			const stepIsContinued = chunk.payload?.stepResult?.isContinued === true;
++			if (toolDisplay !== "grouped" && !stepIsContinued) await closeSession();
+ 			continue;
+ 		}
+ 		if (chunk.type === "file") {
+@@ -19321,7 +19338,6 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
+ 			continue;
+ 		}
+ 		if (chunk.type === "finish") {
+-			await closeSession();
+ 			tracker.reset();
+ 			continue;
+ 		}
+@@ -24662,7 +24678,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  							...options,
  							messageId: currentMessageId
  						}) } : void 0;
@@ -35,7 +57,7 @@ index 6c7efc0..ea7ab03 100644
  							error,
  							messages: messageList.get.all.db(),
  							messageList,
-@@ -24679,7 +24691,8 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24679,7 +24695,8 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  								outputStream.messageId = currentMessageId;
  								return currentMessageId;
  							}
@@ -45,7 +67,7 @@ index 6c7efc0..ea7ab03 100644
  							runState.setState({
  								hasErrored: false,
  								apiError: void 0
-@@ -24693,6 +24706,24 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24693,6 +24710,24 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  								processAPIErrorRetry: { retry: true }
  							};
  						}
@@ -70,7 +92,7 @@ index 6c7efc0..ea7ab03 100644
  						throw error;
  					}
  				}
-@@ -24798,6 +24829,15 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24798,6 +24833,15 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  						apiError: void 0,
  						deferredErrorChunk: void 0
  					});
@@ -86,7 +108,7 @@ index 6c7efc0..ea7ab03 100644
  				}
  			}
  			if (apiErrorRetryResult?.retry && options?.abortSignal?.aborted) {
-@@ -24813,9 +24853,13 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24813,9 +24857,13 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  			}
  			if (apiErrorRetryResult?.retry) {
  				cleanupProviderToolSpans(true);
@@ -101,7 +123,7 @@ index 6c7efc0..ea7ab03 100644
  				const messages = {
  					all: messageList.get.all.aiV5.model(),
  					user: messageList.get.input.aiV5.model(),
-@@ -24843,7 +24887,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24843,7 +24891,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  					},
  					messages,
  					processorRetryCount: nextProcessorRetryCount,
@@ -111,7 +133,7 @@ index 6c7efc0..ea7ab03 100644
  			}
  			if (runState.state.deferredErrorChunk && runState.state.hasErrored) {
 diff --git a/dist/agent-CKAVuxKN.js b/dist/agent-CKAVuxKN.js
-index 2d9462a..3f41837 100644
+index 2d9462a..45f974d 100644
 --- a/dist/agent-CKAVuxKN.js
 +++ b/dist/agent-CKAVuxKN.js
 @@ -13127,11 +13127,23 @@ var TokenLimiterProcessor = class TokenLimiterProcessor {
@@ -138,7 +160,29 @@ index 2d9462a..3f41837 100644
  			} else tokenString += JSON.stringify(part);
  		}
  		overhead += TokenLimiterProcessor.TOKENS_PER_MESSAGE;
-@@ -24660,7 +24672,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -19306,7 +19318,12 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
+ 			continue;
+ 		}
+ 		if (chunk.type === "step-finish") {
+-			if (toolDisplay !== "grouped") await closeSession();
++			// A continued step (retry, in-place or fallback-model escalation) means
++			// the run is still alive: closing here would finalize the Slack message
++			// before the retry's output arrives. Mirrors ChatChannelOutputProcessor's
++			// own isContinued check for the same chunk type.
++			const stepIsContinued = chunk.payload?.stepResult?.isContinued === true;
++			if (toolDisplay !== "grouped" && !stepIsContinued) await closeSession();
+ 			continue;
+ 		}
+ 		if (chunk.type === "file") {
+@@ -19319,7 +19336,6 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
+ 			continue;
+ 		}
+ 		if (chunk.type === "finish") {
+-			await closeSession();
+ 			tracker.reset();
+ 			continue;
+ 		}
+@@ -24660,7 +24676,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  							...options,
  							messageId: currentMessageId
  						}) } : void 0;
@@ -147,7 +191,7 @@ index 2d9462a..3f41837 100644
  							error,
  							messages: messageList.get.all.db(),
  							messageList,
-@@ -24677,7 +24689,8 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24677,7 +24693,8 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  								outputStream.messageId = currentMessageId;
  								return currentMessageId;
  							}
@@ -157,7 +201,7 @@ index 2d9462a..3f41837 100644
  							runState.setState({
  								hasErrored: false,
  								apiError: void 0
-@@ -24691,6 +24704,24 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24691,6 +24708,24 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  								processAPIErrorRetry: { retry: true }
  							};
  						}
@@ -182,7 +226,7 @@ index 2d9462a..3f41837 100644
  						throw error;
  					}
  				}
-@@ -24796,6 +24827,15 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24796,6 +24831,15 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  						apiError: void 0,
  						deferredErrorChunk: void 0
  					});
@@ -198,7 +242,7 @@ index 2d9462a..3f41837 100644
  				}
  			}
  			if (apiErrorRetryResult?.retry && options?.abortSignal?.aborted) {
-@@ -24811,9 +24851,13 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24811,9 +24855,13 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  			}
  			if (apiErrorRetryResult?.retry) {
  				cleanupProviderToolSpans(true);
@@ -213,7 +257,7 @@ index 2d9462a..3f41837 100644
  				const messages = {
  					all: messageList.get.all.aiV5.model(),
  					user: messageList.get.input.aiV5.model(),
-@@ -24841,7 +24885,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24841,7 +24889,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  					},
  					messages,
  					processorRetryCount: nextProcessorRetryCount,
