@@ -1,9 +1,6 @@
 import { Mastra } from '@mastra/core/mastra';
-import { MastraCompositeStore } from '@mastra/core/storage';
-import { DuckDBStore } from '@mastra/duckdb';
 import {
   MastraPlatformExporter,
-  MastraStorageExporter,
   Observability,
   SensitiveDataFilter,
 } from '@mastra/observability';
@@ -36,21 +33,12 @@ export const mastra = new Mastra({
       }
     },
   },
-  storage: new MastraCompositeStore({
-    id: 'composite-storage',
-    default: postgresStore,
-    domains: {
-      observability: await new DuckDBStore({
-        path: './observability.duckdb',
-      }).getStore('observability'),
-    },
-  }),
+  storage: postgresStore,
   observability: new Observability({
     configs: {
       default: {
         serviceName: 'orchestrator',
         exporters: [
-          new MastraStorageExporter(),
           new MastraPlatformExporter({
             accessToken: env.MASTRA_PLATFORM_ACCESS_TOKEN,
             projectId: env.MASTRA_PROJECT_ID,
