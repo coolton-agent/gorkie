@@ -1,5 +1,5 @@
 diff --git a/dist/agent-BOdDHE12.cjs b/dist/agent-BOdDHE12.cjs
-index 6c7efc0..f900491 100644
+index 6c7efc0..ef7af5e 100644
 --- a/dist/agent-BOdDHE12.cjs
 +++ b/dist/agent-BOdDHE12.cjs
 @@ -13129,11 +13129,23 @@ var TokenLimiterProcessor = class TokenLimiterProcessor {
@@ -40,7 +40,7 @@ index 6c7efc0..f900491 100644
  			continue;
  		}
  		if (chunk.type === "file") {
-@@ -19321,7 +19338,6 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
+@@ -19321,11 +19338,11 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
  			continue;
  		}
  		if (chunk.type === "finish") {
@@ -48,7 +48,12 @@ index 6c7efc0..f900491 100644
  			tracker.reset();
  			continue;
  		}
-@@ -24662,7 +24678,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 		if (chunk.type === "error") {
++			logger?.warn?.(`[fallback-debug] runId='${chunk.runId}' runStreamingDriver RECEIVED error chunk from fullStream, closing session and posting`);
+ 			await closeSession();
+ 			await postStreamError({
+ 				chunk,
+@@ -24662,7 +24679,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  							...options,
  							messageId: currentMessageId
  						}) } : void 0;
@@ -57,17 +62,18 @@ index 6c7efc0..f900491 100644
  							error,
  							messages: messageList.get.all.db(),
  							messageList,
-@@ -24679,7 +24695,8 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24679,7 +24696,9 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  								outputStream.messageId = currentMessageId;
  								return currentMessageId;
  							}
 -						})).retry && canRetryError) {
 +						});
++						logger?.warn?.(`[fallback-debug] runId='${runId}' sync-throw branch: model=${modelIdStr} activeFallbackModelIndex=${activeFallbackModelIndex} modelsLength=${models.length} canRetryError=${canRetryError} syncErrorResultRetry=${syncErrorResult.retry} currentRetryCount=${currentRetryCount} maxErrorProcessorRetries=${maxErrorProcessorRetries}`);
 +						if (syncErrorResult.retry && canRetryError) {
  							runState.setState({
  								hasErrored: false,
  								apiError: void 0
-@@ -24693,6 +24710,24 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24693,6 +24712,26 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  								processAPIErrorRetry: { retry: true }
  							};
  						}
@@ -76,6 +82,7 @@ index 6c7efc0..f900491 100644
 +						// throwing, so a model that errors here (not just one that fails to start)
 +						// still gets a chance at the rest of the fallback array.
 +						if (activeFallbackModelIndex + 1 < models.length) {
++							logger?.warn?.(`[fallback-debug] runId='${runId}' sync-throw branch: ESCALATING from index ${activeFallbackModelIndex} to ${activeFallbackModelIndex + 1} (of ${models.length})`);
 +							runState.setState({
 +								hasErrored: false,
 +								apiError: void 0
@@ -89,14 +96,24 @@ index 6c7efc0..f900491 100644
 +								processAPIErrorRetry: { retry: true, advanceFallbackModel: true }
 +							};
 +						}
++						logger?.warn?.(`[fallback-debug] runId='${runId}' sync-throw branch: NOT escalating, throwing. activeFallbackModelIndex=${activeFallbackModelIndex} modelsLength=${models.length}`);
  						throw error;
  					}
  				}
-@@ -24798,6 +24833,15 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24791,6 +24830,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 						return currentMessageId;
+ 					}
+ 				});
++				logger?.warn?.(`[fallback-debug] runId='${runId}' deferred-chunk branch: activeFallbackModelIndex=${activeFallbackModelIndex} modelsLength=${models.length} canRetryError=${canRetryError} errorResultRetry=${errorResult.retry} currentRetryCount=${currentRetryCount}`);
+ 				if (errorResult.retry && canRetryError) {
+ 					apiErrorRetryResult = errorResult;
+ 					runState.setState({
+@@ -24798,6 +24838,16 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  						apiError: void 0,
  						deferredErrorChunk: void 0
  					});
 +				} else if (activeFallbackModelIndex + 1 < models.length) {
++					logger?.warn?.(`[fallback-debug] runId='${runId}' deferred-chunk branch: ESCALATING from index ${activeFallbackModelIndex} to ${activeFallbackModelIndex + 1} (of ${models.length})`);
 +					// Same escalation as the synchronous-throw path above, for errors
 +					// that only surface after the model already started streaming.
 +					apiErrorRetryResult = { retry: true, advanceFallbackModel: true };
@@ -108,7 +125,7 @@ index 6c7efc0..f900491 100644
  				}
  			}
  			if (apiErrorRetryResult?.retry && options?.abortSignal?.aborted) {
-@@ -24813,9 +24857,13 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24813,9 +24863,13 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  			}
  			if (apiErrorRetryResult?.retry) {
  				cleanupProviderToolSpans(true);
@@ -123,7 +140,7 @@ index 6c7efc0..f900491 100644
  				const messages = {
  					all: messageList.get.all.aiV5.model(),
  					user: messageList.get.input.aiV5.model(),
-@@ -24843,7 +24891,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24843,12 +24897,13 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  					},
  					messages,
  					processorRetryCount: nextProcessorRetryCount,
@@ -132,8 +149,14 @@ index 6c7efc0..f900491 100644
  				};
  			}
  			if (runState.state.deferredErrorChunk && runState.state.hasErrored) {
+ 				const deferredChunk = runState.state.deferredErrorChunk;
+ 				const deferredError = require_error.getErrorFromUnknown(deferredChunk.payload.error, { fallbackMessage: "Unknown error in agent stream" });
++				logger?.warn?.(`[fallback-debug] runId='${runId}' ENQUEUING TERMINAL ERROR CHUNK to controller: ${deferredError?.message}`);
+ 				require_trip_wire.safeEnqueue(controller, {
+ 					...deferredChunk,
+ 					payload: {
 diff --git a/dist/agent-CKAVuxKN.js b/dist/agent-CKAVuxKN.js
-index 2d9462a..45f974d 100644
+index 2d9462a..d7fe17f 100644
 --- a/dist/agent-CKAVuxKN.js
 +++ b/dist/agent-CKAVuxKN.js
 @@ -13127,11 +13127,23 @@ var TokenLimiterProcessor = class TokenLimiterProcessor {
@@ -174,7 +197,7 @@ index 2d9462a..45f974d 100644
  			continue;
  		}
  		if (chunk.type === "file") {
-@@ -19319,7 +19336,6 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
+@@ -19319,11 +19336,11 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
  			continue;
  		}
  		if (chunk.type === "finish") {
@@ -182,7 +205,12 @@ index 2d9462a..45f974d 100644
  			tracker.reset();
  			continue;
  		}
-@@ -24660,7 +24676,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 		if (chunk.type === "error") {
++			logger?.warn?.(`[fallback-debug] runId='${chunk.runId}' runStreamingDriver RECEIVED error chunk from fullStream, closing session and posting`);
+ 			await closeSession();
+ 			await postStreamError({
+ 				chunk,
+@@ -24660,7 +24677,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  							...options,
  							messageId: currentMessageId
  						}) } : void 0;
@@ -191,17 +219,18 @@ index 2d9462a..45f974d 100644
  							error,
  							messages: messageList.get.all.db(),
  							messageList,
-@@ -24677,7 +24693,8 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24677,7 +24694,9 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  								outputStream.messageId = currentMessageId;
  								return currentMessageId;
  							}
 -						})).retry && canRetryError) {
 +						});
++						logger?.warn?.(`[fallback-debug] runId='${runId}' sync-throw branch: model=${modelIdStr} activeFallbackModelIndex=${activeFallbackModelIndex} modelsLength=${models.length} canRetryError=${canRetryError} syncErrorResultRetry=${syncErrorResult.retry} currentRetryCount=${currentRetryCount} maxErrorProcessorRetries=${maxErrorProcessorRetries}`);
 +						if (syncErrorResult.retry && canRetryError) {
  							runState.setState({
  								hasErrored: false,
  								apiError: void 0
-@@ -24691,6 +24708,24 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24691,6 +24710,26 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  								processAPIErrorRetry: { retry: true }
  							};
  						}
@@ -210,6 +239,7 @@ index 2d9462a..45f974d 100644
 +						// throwing, so a model that errors here (not just one that fails to start)
 +						// still gets a chance at the rest of the fallback array.
 +						if (activeFallbackModelIndex + 1 < models.length) {
++							logger?.warn?.(`[fallback-debug] runId='${runId}' sync-throw branch: ESCALATING from index ${activeFallbackModelIndex} to ${activeFallbackModelIndex + 1} (of ${models.length})`);
 +							runState.setState({
 +								hasErrored: false,
 +								apiError: void 0
@@ -223,14 +253,24 @@ index 2d9462a..45f974d 100644
 +								processAPIErrorRetry: { retry: true, advanceFallbackModel: true }
 +							};
 +						}
++						logger?.warn?.(`[fallback-debug] runId='${runId}' sync-throw branch: NOT escalating, throwing. activeFallbackModelIndex=${activeFallbackModelIndex} modelsLength=${models.length}`);
  						throw error;
  					}
  				}
-@@ -24796,6 +24831,15 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24789,6 +24828,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 						return currentMessageId;
+ 					}
+ 				});
++				logger?.warn?.(`[fallback-debug] runId='${runId}' deferred-chunk branch: activeFallbackModelIndex=${activeFallbackModelIndex} modelsLength=${models.length} canRetryError=${canRetryError} errorResultRetry=${errorResult.retry} currentRetryCount=${currentRetryCount}`);
+ 				if (errorResult.retry && canRetryError) {
+ 					apiErrorRetryResult = errorResult;
+ 					runState.setState({
+@@ -24796,6 +24836,16 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  						apiError: void 0,
  						deferredErrorChunk: void 0
  					});
 +				} else if (activeFallbackModelIndex + 1 < models.length) {
++					logger?.warn?.(`[fallback-debug] runId='${runId}' deferred-chunk branch: ESCALATING from index ${activeFallbackModelIndex} to ${activeFallbackModelIndex + 1} (of ${models.length})`);
 +					// Same escalation as the synchronous-throw path above, for errors
 +					// that only surface after the model already started streaming.
 +					apiErrorRetryResult = { retry: true, advanceFallbackModel: true };
@@ -242,7 +282,7 @@ index 2d9462a..45f974d 100644
  				}
  			}
  			if (apiErrorRetryResult?.retry && options?.abortSignal?.aborted) {
-@@ -24811,9 +24855,13 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24811,9 +24861,13 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  			}
  			if (apiErrorRetryResult?.retry) {
  				cleanupProviderToolSpans(true);
@@ -257,7 +297,7 @@ index 2d9462a..45f974d 100644
  				const messages = {
  					all: messageList.get.all.aiV5.model(),
  					user: messageList.get.input.aiV5.model(),
-@@ -24841,7 +24889,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24841,12 +24895,13 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  					},
  					messages,
  					processorRetryCount: nextProcessorRetryCount,
@@ -266,3 +306,9 @@ index 2d9462a..45f974d 100644
  				};
  			}
  			if (runState.state.deferredErrorChunk && runState.state.hasErrored) {
+ 				const deferredChunk = runState.state.deferredErrorChunk;
+ 				const deferredError = getErrorFromUnknown(deferredChunk.payload.error, { fallbackMessage: "Unknown error in agent stream" });
++				logger?.warn?.(`[fallback-debug] runId='${runId}' ENQUEUING TERMINAL ERROR CHUNK to controller: ${deferredError?.message}`);
+ 				safeEnqueue(controller, {
+ 					...deferredChunk,
+ 					payload: {
