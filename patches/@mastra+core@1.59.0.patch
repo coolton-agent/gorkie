@@ -1,5 +1,5 @@
 diff --git a/dist/agent-BOdDHE12.cjs b/dist/agent-BOdDHE12.cjs
-index 6c7efc0..07c8853 100644
+index 6c7efc0..32fd149 100644
 --- a/dist/agent-BOdDHE12.cjs
 +++ b/dist/agent-BOdDHE12.cjs
 @@ -13129,11 +13129,23 @@ var TokenLimiterProcessor = class TokenLimiterProcessor {
@@ -140,7 +140,7 @@ index 6c7efc0..07c8853 100644
  				const messages = {
  					all: messageList.get.all.aiV5.model(),
  					user: messageList.get.input.aiV5.model(),
-@@ -24843,12 +24897,13 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24843,19 +24897,26 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  					},
  					messages,
  					processorRetryCount: nextProcessorRetryCount,
@@ -151,23 +151,42 @@ index 6c7efc0..07c8853 100644
  			if (runState.state.deferredErrorChunk && runState.state.hasErrored) {
  				const deferredChunk = runState.state.deferredErrorChunk;
  				const deferredError = require_error.getErrorFromUnknown(deferredChunk.payload.error, { fallbackMessage: "Unknown error in agent stream" });
+-				require_trip_wire.safeEnqueue(controller, {
 +				logger?.warn?.(`[fallback-debug] runId='${runId}' ENQUEUING TERMINAL ERROR CHUNK to controller: ${deferredError?.message}`);
- 				require_trip_wire.safeEnqueue(controller, {
++				const terminalErrorChunk = {
  					...deferredChunk,
  					payload: {
-@@ -26790,8 +26845,10 @@ function workflowLoopStream({ resumeContext, requireToolApproval, models, toolCh
+ 						...deferredChunk.payload,
+ 						error: deferredError
+ 					}
+-				});
++				};
++				// Raw per-model-call error chunks are withheld from output processors so a
++				// retryable failure never renders, which makes this the only error the
++				// renderer can see. Route it through the processors, not straight to the
++				// controller, or an exhausted fallback would fail silently.
++				if (outputWriter) await outputWriter(terminalErrorChunk);
++				else require_trip_wire.safeEnqueue(controller, terminalErrorChunk);
+ 				await options?.onError?.({ error: deferredError });
+ 				runState.setState({ deferredErrorChunk: void 0 });
+ 			}
+@@ -26790,9 +26851,13 @@ function workflowLoopStream({ resumeContext, requireToolApproval, models, toolCh
  				actor: rest.actor
  			});
  			if (executionResult.status !== "success") {
 +				rest.logger?.warn?.(`[fallback-debug] runId='${runId}' workflowLoopStream: executionResult.status='${executionResult.status}' (non-success, closing stream)`);
  				if (executionResult.status === "failed") {
  					const error = require_error.getErrorFromUnknown(executionResult.error, { fallbackMessage: "Unknown error in agent workflow stream" });
+-					require_trip_wire.safeEnqueue(controller, {
 +					rest.logger?.warn?.(`[fallback-debug] runId='${runId}' WORKFLOW-LEVEL FAILURE in workflowLoopStream: executionResult.status='${executionResult.status}' error='${error?.message}' - this is the dowhile loop's own status check, separate from createLLMExecutionStep's own retry/escalation logic`);
- 					require_trip_wire.safeEnqueue(controller, {
++					// Same reason as the terminal deferred-error chunk: output processors no
++					// longer see raw error chunks, so a sync throw must reach them here.
++					await outputWriter({
  						type: "error",
  						runId,
+ 						from: "AGENT",
 diff --git a/dist/agent-CKAVuxKN.js b/dist/agent-CKAVuxKN.js
-index 2d9462a..a719fb0 100644
+index 2d9462a..ae469b3 100644
 --- a/dist/agent-CKAVuxKN.js
 +++ b/dist/agent-CKAVuxKN.js
 @@ -13127,11 +13127,23 @@ var TokenLimiterProcessor = class TokenLimiterProcessor {
@@ -308,7 +327,7 @@ index 2d9462a..a719fb0 100644
  				const messages = {
  					all: messageList.get.all.aiV5.model(),
  					user: messageList.get.input.aiV5.model(),
-@@ -24841,12 +24895,13 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -24841,19 +24895,26 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  					},
  					messages,
  					processorRetryCount: nextProcessorRetryCount,
@@ -319,18 +338,63 @@ index 2d9462a..a719fb0 100644
  			if (runState.state.deferredErrorChunk && runState.state.hasErrored) {
  				const deferredChunk = runState.state.deferredErrorChunk;
  				const deferredError = getErrorFromUnknown(deferredChunk.payload.error, { fallbackMessage: "Unknown error in agent stream" });
+-				safeEnqueue(controller, {
 +				logger?.warn?.(`[fallback-debug] runId='${runId}' ENQUEUING TERMINAL ERROR CHUNK to controller: ${deferredError?.message}`);
- 				safeEnqueue(controller, {
++				const terminalErrorChunk = {
  					...deferredChunk,
  					payload: {
-@@ -26788,8 +26843,10 @@ function workflowLoopStream({ resumeContext, requireToolApproval, models, toolCh
+ 						...deferredChunk.payload,
+ 						error: deferredError
+ 					}
+-				});
++				};
++				// Raw per-model-call error chunks are withheld from output processors so a
++				// retryable failure never renders, which makes this the only error the
++				// renderer can see. Route it through the processors, not straight to the
++				// controller, or an exhausted fallback would fail silently.
++				if (outputWriter) await outputWriter(terminalErrorChunk);
++				else safeEnqueue(controller, terminalErrorChunk);
+ 				await options?.onError?.({ error: deferredError });
+ 				runState.setState({ deferredErrorChunk: void 0 });
+ 			}
+@@ -26788,9 +26849,13 @@ function workflowLoopStream({ resumeContext, requireToolApproval, models, toolCh
  				actor: rest.actor
  			});
  			if (executionResult.status !== "success") {
 +				rest.logger?.warn?.(`[fallback-debug] runId='${runId}' workflowLoopStream: executionResult.status='${executionResult.status}' (non-success, closing stream)`);
  				if (executionResult.status === "failed") {
  					const error = getErrorFromUnknown(executionResult.error, { fallbackMessage: "Unknown error in agent workflow stream" });
+-					safeEnqueue(controller, {
 +					rest.logger?.warn?.(`[fallback-debug] runId='${runId}' WORKFLOW-LEVEL FAILURE in workflowLoopStream: executionResult.status='${executionResult.status}' error='${error?.message}' - this is the dowhile loop's own status check, separate from createLLMExecutionStep's own retry/escalation logic`);
- 					safeEnqueue(controller, {
++					// Same reason as the terminal deferred-error chunk: output processors no
++					// longer see raw error chunks, so a sync throw must reach them here.
++					await outputWriter({
  						type: "error",
  						runId,
+ 						from: "AGENT",
+diff --git a/dist/trip-wire-CBLOOcnC.cjs b/dist/trip-wire-CBLOOcnC.cjs
+index c3e5273..40d9ebd 100644
+--- a/dist/trip-wire-CBLOOcnC.cjs
++++ b/dist/trip-wire-CBLOOcnC.cjs
+@@ -2874,7 +2874,7 @@ var MastraModelOutput = class extends require_base.MastraBase {
+ 		if (processorRunner && options.isLLMExecutionStep) {
+ 			const processorStates = options.processorStates || /* @__PURE__ */ new Map();
+ 			processedStream = stream.pipeThrough(new stream_web.TransformStream({ async transform(chunk, controller) {
+-				if (chunk.type === "finish" && chunk.payload?.stepResult?.reason === "tool-calls") {
++				if (chunk.type === "finish" && chunk.payload?.stepResult?.reason === "tool-calls" || chunk.type === "error" || chunk.type === "finish" && chunk.payload?.stepResult?.reason === "error") {
+ 					controller.enqueue(chunk);
+ 					return;
+ 				} else {
+diff --git a/dist/trip-wire-nmFrT3yU.js b/dist/trip-wire-nmFrT3yU.js
+index 3a74ec6..1b2a0c2 100644
+--- a/dist/trip-wire-nmFrT3yU.js
++++ b/dist/trip-wire-nmFrT3yU.js
+@@ -2874,7 +2874,7 @@ var MastraModelOutput = class extends MastraBase {
+ 		if (processorRunner && options.isLLMExecutionStep) {
+ 			const processorStates = options.processorStates || /* @__PURE__ */ new Map();
+ 			processedStream = stream.pipeThrough(new TransformStream({ async transform(chunk, controller) {
+-				if (chunk.type === "finish" && chunk.payload?.stepResult?.reason === "tool-calls") {
++				if (chunk.type === "finish" && chunk.payload?.stepResult?.reason === "tool-calls" || chunk.type === "error" || chunk.type === "finish" && chunk.payload?.stepResult?.reason === "error") {
+ 					controller.enqueue(chunk);
+ 					return;
+ 				} else {
