@@ -24,6 +24,7 @@ import { clearStatus } from '../processors/clear-status';
 import { delegatedTools } from '../processors/delegated-tools';
 import { sandbox } from '../processors/sandbox';
 import { moveToolImages } from '../processors/tool-media';
+import { workingModel } from '../processors/working-model';
 import { instructions } from '../prompts';
 import {
   orchestrator as orchestratorModel,
@@ -113,7 +114,12 @@ const orchestrator = new Agent({
       additionalRules: [moveToolImages],
     }),
   ],
-  outputProcessors: [delegatedTools, sandbox, clearStatus],
+  outputProcessors: [
+    delegatedTools,
+    sandbox,
+    clearStatus,
+    workingModel(config.id),
+  ],
   tools: async ({ requestContext }) => {
     const { userId } = channelContext(requestContext);
     const userTools = userId ? await userMCPTools(userId) : {};

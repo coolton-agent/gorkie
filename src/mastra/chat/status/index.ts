@@ -2,18 +2,18 @@ import {
   defaultTypingStatus,
   type TypingStatusFn,
 } from '@mastra/core/channels';
+import { z } from 'zod';
 import { label } from '../../lib/label';
-import type { Args } from './format';
 import { truncate } from './format';
 import { statuses } from './statuses';
 
-// `agent-<id>` (agent.ts: `id: \`agent-${agentName}\``) is the spawn call
-// itself. Once spawned, the sub-agent's OWN tool calls also arrive here
-// namespaced as `agent-<id>_<childToolName>` (observed live: a real
-// "agent-research_get_permalink" tool-call chunk), so a bare startsWith
-// check alone renders both the same way ("research get permalink agent").
+const argsSchema = z.record(z.string(), z.unknown());
+
 const delegationAgentIds = new Set(['research', 'explore']);
 
+// A spawned sub-agent's own tool calls arrive namespaced as
+// `agent-<id>_<childToolName>`, so matching on the `agent-` prefix alone
+// would render them identically to the spawn call itself.
 function delegatedChildTool(
   rest: string
 ): { agentId: string; childToolName: string } | undefined {
@@ -40,18 +40,17 @@ export const status: TypingStatusFn = (chunk, context) => {
     const delegated = delegatedChildTool(rest);
     if (delegated) {
       return truncate(
-        `is using ${delegated.agentId}: ${label(delegated.childToolName).toLowerCase()}…`,
-        50
+        `is using ${delegated.agentId}: ${label(delegated.childToolName).toLowerCase()}…`
       );
     }
-    return truncate(`is spawning a ${label(rest).toLowerCase()} agent…`, 50);
+    return truncate(`is spawning a ${label(rest).toLowerCase()} agent…`);
   }
 
-  const args = (chunk.payload.args as Args | undefined) ?? {};
+  const args = argsSchema.safeParse(chunk.payload.args).data ?? {};
   const known = statuses[toolName]?.(args);
   if (known) {
-    return truncate(known, 50);
+    return truncate(known);
   }
 
-  return truncate(`is using ${label(toolName).toLowerCase()}…`, 50);
+  return truncate(`is using ${label(toolName).toLowerCase()}…`);
 };

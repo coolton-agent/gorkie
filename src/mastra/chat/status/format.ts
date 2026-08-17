@@ -12,7 +12,7 @@ export function fit(
   return prefix + clipped + suffix;
 }
 
-export function truncate(text: string, max: number): string {
+export function truncate(text: string, max = 50): string {
   return text.length > max ? text.slice(0, max) : text;
 }
 

@@ -10,6 +10,7 @@ import { defaultErrorProcessors } from '../lib/error-handling';
 import { stepCountIs } from '../lib/tools';
 import { sandbox } from '../processors/sandbox';
 import { moveToolImages } from '../processors/tool-media';
+import { workingModel } from '../processors/working-model';
 import * as explore from '../prompts/agents/explore';
 import { explorer } from '../providers';
 import { fetchUrlTool } from '../tools/fetch-url';
@@ -59,5 +60,5 @@ export const exploreAgent = new Agent({
     stopWhen: stepCountIs(config.maxSteps),
     autoResumeSuspendedTools: true,
   },
-  outputProcessors: [sandbox],
+  outputProcessors: [sandbox, workingModel('explore')],
 });

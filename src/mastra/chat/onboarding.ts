@@ -21,7 +21,13 @@ const slackErrorSchema = z.looseObject({
     .optional(),
 });
 
-export async function offerOptIn(thread: Thread, user: Author): Promise<void> {
+export async function offerOptIn({
+  thread,
+  user,
+}: {
+  thread: Thread;
+  user: Author;
+}): Promise<void> {
   if (!env.OPT_IN_CHANNEL) {
     return;
   }

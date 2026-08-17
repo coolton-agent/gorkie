@@ -2,6 +2,7 @@ import { MCPClient } from '@mastra/mcp';
 import { listMCPServers, setMCPServerError } from '../db/queries/mcps';
 import { logger } from '../lib/logger';
 import type { MCPServerConfig } from '../types';
+import { cleanMCPErrorMessage } from './errors';
 
 const clients = new Map<string, { key: string; promise: Promise<MCPClient> }>();
 
@@ -167,13 +168,16 @@ export async function userMCPTools(
     const { tools, errors } = await client.listToolsWithErrors();
 
     await Promise.all(
-      servers.map((server) =>
-        setMCPServerError({
+      servers.map((server) => {
+        const rawError = errors[server.name];
+        return setMCPServerError({
           userId,
           name: server.name,
-          error: errors[server.name] ?? null,
-        })
-      )
+          error: rawError
+            ? cleanMCPErrorMessage({ serverName: server.name, raw: rawError })
+            : null,
+        });
+      })
     );
     return tools;
   } catch (error) {
