@@ -1,5 +1,5 @@
 diff --git a/dist/agent-BOdDHE12.cjs b/dist/agent-BOdDHE12.cjs
-index 6c7efc0..ef7af5e 100644
+index 6c7efc0..07c8853 100644
 --- a/dist/agent-BOdDHE12.cjs
 +++ b/dist/agent-BOdDHE12.cjs
 @@ -13129,11 +13129,23 @@ var TokenLimiterProcessor = class TokenLimiterProcessor {
@@ -155,8 +155,19 @@ index 6c7efc0..ef7af5e 100644
  				require_trip_wire.safeEnqueue(controller, {
  					...deferredChunk,
  					payload: {
+@@ -26790,8 +26845,10 @@ function workflowLoopStream({ resumeContext, requireToolApproval, models, toolCh
+ 				actor: rest.actor
+ 			});
+ 			if (executionResult.status !== "success") {
++				rest.logger?.warn?.(`[fallback-debug] runId='${runId}' workflowLoopStream: executionResult.status='${executionResult.status}' (non-success, closing stream)`);
+ 				if (executionResult.status === "failed") {
+ 					const error = require_error.getErrorFromUnknown(executionResult.error, { fallbackMessage: "Unknown error in agent workflow stream" });
++					rest.logger?.warn?.(`[fallback-debug] runId='${runId}' WORKFLOW-LEVEL FAILURE in workflowLoopStream: executionResult.status='${executionResult.status}' error='${error?.message}' - this is the dowhile loop's own status check, separate from createLLMExecutionStep's own retry/escalation logic`);
+ 					require_trip_wire.safeEnqueue(controller, {
+ 						type: "error",
+ 						runId,
 diff --git a/dist/agent-CKAVuxKN.js b/dist/agent-CKAVuxKN.js
-index 2d9462a..d7fe17f 100644
+index 2d9462a..a719fb0 100644
 --- a/dist/agent-CKAVuxKN.js
 +++ b/dist/agent-CKAVuxKN.js
 @@ -13127,11 +13127,23 @@ var TokenLimiterProcessor = class TokenLimiterProcessor {
@@ -312,3 +323,14 @@ index 2d9462a..d7fe17f 100644
  				safeEnqueue(controller, {
  					...deferredChunk,
  					payload: {
+@@ -26788,8 +26843,10 @@ function workflowLoopStream({ resumeContext, requireToolApproval, models, toolCh
+ 				actor: rest.actor
+ 			});
+ 			if (executionResult.status !== "success") {
++				rest.logger?.warn?.(`[fallback-debug] runId='${runId}' workflowLoopStream: executionResult.status='${executionResult.status}' (non-success, closing stream)`);
+ 				if (executionResult.status === "failed") {
+ 					const error = getErrorFromUnknown(executionResult.error, { fallbackMessage: "Unknown error in agent workflow stream" });
++					rest.logger?.warn?.(`[fallback-debug] runId='${runId}' WORKFLOW-LEVEL FAILURE in workflowLoopStream: executionResult.status='${executionResult.status}' error='${error?.message}' - this is the dowhile loop's own status check, separate from createLLMExecutionStep's own retry/escalation logic`);
+ 					safeEnqueue(controller, {
+ 						type: "error",
+ 						runId,
