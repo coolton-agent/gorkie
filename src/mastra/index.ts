@@ -1,6 +1,9 @@
 import { Mastra } from '@mastra/core/mastra';
+import { MastraCompositeStore } from '@mastra/core/storage';
+import { DuckDBStore } from '@mastra/duckdb';
 import {
   MastraPlatformExporter,
+  MastraStorageExporter,
   Observability,
   SensitiveDataFilter,
 } from '@mastra/observability';
@@ -23,6 +26,14 @@ process.on('uncaughtException', (err: Error) => {
   logger.error('[process] uncaught exception', { err });
 });
 
+/**
+ * Local DuckDB trace storage is dev-only. It has no retention/pruning, so
+ * on the prod VM it grew unbounded and swap-thrashed the box into
+ * unresponsiveness (see Aug 17 incident). Traces always ship to Mastra
+ * Platform regardless of environment.
+ */
+const isProduction = env.NODE_ENV === 'production';
+
 export const mastra = new Mastra({
   agents: { orchestrator, summarizer, research, explore },
   schedules: {
@@ -33,12 +44,23 @@ export const mastra = new Mastra({
       }
     },
   },
-  storage: postgresStore,
+  storage: isProduction
+    ? postgresStore
+    : new MastraCompositeStore({
+        id: 'composite-storage',
+        default: postgresStore,
+        domains: {
+          observability: await new DuckDBStore({
+            path: './observability.duckdb',
+          }).getStore('observability'),
+        },
+      }),
   observability: new Observability({
     configs: {
       default: {
         serviceName: 'orchestrator',
         exporters: [
+          ...(isProduction ? [] : [new MastraStorageExporter()]),
           new MastraPlatformExporter({
             accessToken: env.MASTRA_PLATFORM_ACCESS_TOKEN,
             projectId: env.MASTRA_PROJECT_ID,
