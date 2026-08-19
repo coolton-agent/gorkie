@@ -30,3 +30,8 @@ Keep this file limited to unresolved work that belongs in the reusable template.
 ## Ideas
 
 - [ ] Skills support: let users add skills from skills.sh, plus custom skills (upload a ZIP, or import from a GitHub gist). Exploratory, not yet scoped.
+- [ ] Separate consecutive replies in a thread: Slack groups same-author messages, so several distinct replies read as one block. Wanted: a separator ending each posted message, plus a completion footer on the turn's final message showing elapsed seconds, carried inside that message rather than posted as an extra one.
+- [ ] Make the codebase Mastra-native: audit each area for hand-rolled code that current Mastra provides, and delete the glue. Confirmed so far: `moveToolImages` removed (1.60.0 carries tool-result images natively), duplicate `ProviderHistoryCompat` registration removed, `lib/shell.ts` folded into `lib/utils.ts`.
+- [ ] `tools/code-mode/slack.ts` is the jankiest file in the repo: it builds `createCodeMode` twice and monkey-patches `mode.tool.execute` to rebuild the instance per request. Find a supported way to scope tools per request instead.
+- [ ] Local `check:spelling` cannot run: cspell 10 needs Node >=22.18.0 and the container has 22.17.0 with no version manager, while the repo already pins Node 24 (`.nvmrc`, `engines`). CI runs Node 24 so it is unaffected. Get Node 24 into the dev container.
+- [ ] Mastra's `WorkspaceSkills` logs through raw `console.warn`/`console.error` instead of the configured logger, so its warnings bypass pino. Worth filing upstream; the local warning goes away once taste-skill is split.

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { E2BSandbox } from '@mastra/e2b';
 import { env } from '@/env';
 import { sandbox as config } from '../config';
-import { sandboxPrompt } from '../prompts/sandbox';
+import { sandboxPrompt } from '../prompts/features/sandbox';
 import { sandboxEnv } from './env';
 import { network } from './network';
 

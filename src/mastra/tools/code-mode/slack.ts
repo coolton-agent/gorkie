@@ -1,11 +1,11 @@
 import type { ToolsInput } from '@mastra/core/agent';
 import type { RequestContext } from '@mastra/core/request-context';
-import { createCodeMode } from '@mastra/core/tools';
+import { createCodeMode, createCodeModeTool } from '@mastra/core/tools';
 import { createWorkspaceTools } from '@mastra/core/workspace';
 import { E2BCodeModeTransport } from '@mastra/e2b';
 import { sandbox as sandboxConfig } from '../../config';
 import { mcpTools } from '../../mcp';
-import { codeModeFilesPrompt, codeModePrompt } from '../../prompts/code-mode';
+import { codeModePrompt } from '../../prompts/features/code-mode';
 import { codeModeToolNames, getSandbox, workspace } from '../../workspace';
 import { canvasTools } from '../canvas';
 import { grepTool } from '../grep';
@@ -30,9 +30,6 @@ const slackCodeTools = {
   lookup_canvas_sections: canvasTools.lookup_canvas_sections,
 };
 
-// Built per request, not once at module load: each set carries its own
-// read-before-write tracker and write lock, and sharing those across threads
-// would let one thread's sandbox satisfy or stale-fail another's writes.
 async function getSandboxTools(
   requestContext?: RequestContext
 ): Promise<ToolsInput> {
@@ -67,9 +64,8 @@ async function createCodeModeInstance({
     if (!sandbox) {
       throw new Error('No E2B sandbox available for Slack code mode.');
     }
-    const {
-      tool: { execute },
-    } = createCodeMode(
+
+    const { execute } = createCodeModeTool(
       {
         ...modeConfig,
         sandbox,
@@ -94,11 +90,15 @@ async function createCodeModeInstance({
 export const slackCodeMode = await createCodeModeInstance({
   sandboxAccess: true,
 });
-export const slackCodeModePrompt = `${codeModePrompt(slackCodeMode.instructions)}\n\n${codeModeFilesPrompt}`;
+export const slackCodeModePrompt = codeModePrompt({
+  instructions: slackCodeMode.instructions,
+  files: true,
+});
 
 export const readOnlySlackCodeMode = await createCodeModeInstance({
   sandboxAccess: false,
 });
-export const readOnlySlackCodeModePrompt = codeModePrompt(
-  readOnlySlackCodeMode.instructions
-);
+export const readOnlySlackCodeModePrompt = codeModePrompt({
+  instructions: readOnlySlackCodeMode.instructions,
+  files: false,
+});
