@@ -1,6 +1,7 @@
 import { PostgresStore } from '@mastra/pg';
 import { Kysely, PostgresDialect } from 'kysely';
 import { env } from '@/env';
+import type { FeedbackTable } from './schema/feedback';
 import type { MCPServersTable } from './schema/mcps';
 import type { UserSettingsTable } from './schema/settings';
 
@@ -10,6 +11,7 @@ export const postgresStore = new PostgresStore({
 });
 
 interface Database {
+  feedback: FeedbackTable;
   mcp_servers: MCPServersTable;
   user_settings: UserSettingsTable;
 }

@@ -1,5 +1,6 @@
 import { canvasTools } from './canvas';
 import { slackCodeMode } from './code-mode/slack';
+import { submitFeedbackTool } from './feedback';
 import { fetchUrlTool } from './fetch-url';
 import { generateImageTool } from './generate-image';
 import { grepTool } from './grep';
@@ -35,5 +36,6 @@ export const deferredTools = {
   list_threads: slackTools.list_threads,
   generate_image: generateImageTool,
   upload_emoji: uploadEmojiTool,
+  submit_feedback: submitFeedbackTool,
   ...canvasTools,
 };
