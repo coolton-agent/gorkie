@@ -1,7 +1,6 @@
 import {
   isBadRequestError,
   PrefillErrorHandler,
-  ProviderHistoryCompat,
   StreamErrorRetryProcessor,
 } from '@mastra/core/processors';
 
@@ -50,6 +49,5 @@ export function defaultErrorProcessors() {
       ],
     }),
     new PrefillErrorHandler(),
-    new ProviderHistoryCompat(),
   ];
 }

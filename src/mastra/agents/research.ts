@@ -1,5 +1,8 @@
 import { Agent } from '@mastra/core/agent';
-import { TokenLimiterProcessor } from '@mastra/core/processors';
+import {
+  ProviderHistoryCompat,
+  TokenLimiterProcessor,
+} from '@mastra/core/processors';
 import { InMemoryStore } from '@mastra/core/storage';
 import { Memory } from '@mastra/memory';
 import { agent as config } from '../config';
@@ -43,6 +46,7 @@ export const researchAgent = new Agent({
       limit: config.maxTokens.input,
       trimMode: 'contiguous',
     }),
+    new ProviderHistoryCompat(),
   ],
   defaultOptions: {
     modelSettings: {

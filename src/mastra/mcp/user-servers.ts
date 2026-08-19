@@ -24,7 +24,7 @@ async function buildClient({
       });
     });
   }
-  return new MCPClient({
+  const client = new MCPClient({
     id: `user-mcp-${userId}`,
     servers: Object.fromEntries(
       servers.flatMap((server) => {
@@ -59,6 +59,8 @@ async function buildClient({
       })
     ),
   });
+  client.__setLogger(logger);
+  return client;
 }
 
 async function dropClient(userId: string): Promise<void> {
@@ -130,6 +132,7 @@ export async function findMCPConnectionError({
       },
     },
   });
+  probe.__setLogger(logger);
   try {
     const { errors } = await probe.listToolsWithErrors();
     const error = errors[server.name];

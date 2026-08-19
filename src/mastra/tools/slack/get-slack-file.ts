@@ -3,7 +3,7 @@ import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { env } from '@/env';
 import { slack } from '../../chat/client';
-import { sh } from '../../lib/shell';
+import { sh } from '../../lib/utils';
 import { input, output } from '../../types/tools/index';
 import { getSandbox } from '../../workspace';
 import { p } from '../../workspace/path';
