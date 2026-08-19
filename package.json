@@ -5,9 +5,6 @@
   "type": "module",
   "module": "src/mastra/index.ts",
   "private": true,
-  "patchedDependencies": {
-    "@mastra/core@1.59.0": "patches/@mastra+core@1.59.0.patch"
-  },
   "scripts": {
     "dev": "mastra dev --request-context-presets ./studio/request-context.json",
     "build": "mastra build",
@@ -24,14 +21,14 @@
   "dependencies": {
     "@ai-sdk/provider-utils": "^5.0.26",
     "@chat-adapter/slack": "^4.35.0",
-    "@mastra/core": "^1.59.0",
-    "@mastra/duckdb": "1.6.1",
-    "@mastra/e2b": "0.8.2",
+    "@mastra/core": "1.60.1-alpha.0",
+    "@mastra/duckdb": "1.6.2",
+    "@mastra/e2b": "0.9.0",
     "@mastra/loggers": "1.2.0",
-    "@mastra/mcp": "^1.16.0",
-    "@mastra/memory": "^1.26.2",
-    "@mastra/observability": "1.17.0",
-    "@mastra/pg": "1.20.0",
+    "@mastra/mcp": "^1.17.0",
+    "@mastra/memory": "^1.27.0",
+    "@mastra/observability": "1.17.1",
+    "@mastra/pg": "1.21.0",
     "@openrouter/ai-sdk-provider": "^3.0.0",
     "@t3-oss/env-core": "^0.13.11",
     "ai": "^7.0.66",
@@ -54,11 +51,14 @@
     "@types/node": "^24",
     "cspell": "^10.0.1",
     "lefthook": "^2.1.10",
-    "mastra": "^1.25.0",
+    "mastra": "^1.25.1",
     "typescript": "^6.0.3",
     "ultracite": "7.9.4"
   },
   "engines": {
     "node": ">=24.0.0"
+  },
+  "patchedDependencies": {
+    "@mastra/core@1.60.1-alpha.0": "patches/@mastra+core@1.60.1-alpha.0.patch"
   }
 }

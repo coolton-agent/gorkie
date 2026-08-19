@@ -26,12 +26,6 @@ process.on('uncaughtException', (err: Error) => {
   logger.error('[process] uncaught exception', { err });
 });
 
-/**
- * Local DuckDB trace storage is dev-only. It has no retention/pruning, so
- * on the prod VM it grew unbounded and swap-thrashed the box into
- * unresponsiveness (see Aug 17 incident). Traces always ship to Mastra
- * Platform regardless of environment.
- */
 const isProduction = env.NODE_ENV === 'production';
 
 export const mastra = new Mastra({
