@@ -13,8 +13,6 @@ export const turnFooter = {
   name: 'Turn Footer',
   description:
     'Closes a turn with how long it took and a thumbs rating for the response.',
-  // Stamped on the first chunk rather than at step end, which on a single-step
-  // turn is the end of the only step and reads as no time at all.
   processOutputStream(args: ProcessOutputStreamArgs) {
     args.state.startTime ??= Date.now();
     return args.part;
@@ -22,8 +20,7 @@ export const turnFooter = {
   async processOutputResult(args: ProcessOutputResultArgs) {
     const { threadId } = channelContext(args.requestContext);
     const { startTime } = args.state;
-    // A turn that answers with no text posts nothing, so a footer would be the
-    // only message in the thread and would undo that.
+
     if (
       !(threadId && args.result.text.trim()) ||
       typeof startTime !== 'number'
