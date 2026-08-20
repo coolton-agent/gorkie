@@ -13,7 +13,7 @@ Keep this file limited to unresolved work that belongs in the reusable template.
 
 ## Known issues
 
-- [ ] Push the PR #13 hardening commit. It is committed locally on `pr-13-search-token` (worktree in the session scratchpad) but unpushed: `GH_TOKEN` in the shell is invalid, so `gh auth git-credential` rejects every push. Re-auth, then `git push pr13 pr-13-search-token:main` to update PR #13 in place (`maintainer_can_modify` is true).
+- [x] Harden the PR #13 Slack search user-token fallback (public-channel pin, scope verification, live-message gate, identity-pinned cursors, `searchedAs` provenance). Pushed to PR #13 as `8cf2273`; still needs a live Slack run to confirm the scope check and the expiry-to-fallback path.
 - [ ] Live-test the Slack output changes: click a thumbs up and a thumbs down on a turn footer and confirm both record against the right trace, since the click payload shape was never confirmed against a real click. Same turn also exercises the footer's elapsed time and the suggested prompts now coming from adapter config.
 - [ ] Live-test the `1.60.1-alpha.0` upgrade: reproduce a Luna rate-limit in Slack and confirm the fallback escalates silently, with a real error still surfacing once both models are exhausted.
 - [ ] Move off the `1.60.1-alpha.0` prerelease pin once `1.60.1` ships stable.
