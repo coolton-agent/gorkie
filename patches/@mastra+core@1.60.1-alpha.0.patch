@@ -1,0 +1,136 @@
+diff --git a/dist/agent-BzwQJhke.cjs b/dist/agent-BzwQJhke.cjs
+index a37f2c0..d9f66c1 100644
+--- a/dist/agent-BzwQJhke.cjs
++++ b/dist/agent-BzwQJhke.cjs
+@@ -19661,7 +19661,10 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
+ 			continue;
+ 		}
+ 		if (chunk.type === "step-finish") {
+-			if (toolDisplay !== "grouped") await closeSession();
++			// A continued step (retry, in-place or fallback-model escalation) means the
++			// run is still alive: closing here would finalize the message early.
++			const stepIsContinued = chunk.payload?.stepResult?.isContinued === true;
++			if (toolDisplay !== "grouped" && !stepIsContinued) await closeSession();
+ 			continue;
+ 		}
+ 		if (chunk.type === "file") {
+@@ -19674,7 +19677,8 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
+ 			continue;
+ 		}
+ 		if (chunk.type === "finish") {
+-			await closeSession();
++			// The session is closed once after the loop, so leaving it open here lets
++			// a fallback escalation keep streaming into the same message.
+ 			tracker.reset();
+ 			continue;
+ 		}
+@@ -25320,6 +25324,19 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 						apiError: void 0,
+ 						deferredErrorChunk: void 0
+ 					});
++				} else if (activeFallbackModelIndex + 1 < models.length) {
++					// Stock only advances the fallback index when the model call throws.
++					// An error delivered as an in-band stream chunk returns normally, so
++					// without this the remaining models are never tried. Escalate inside
++					// the retry path (isContinued) rather than throwing, so the response
++					// message id rotates and the next model doesn't stream into the
++					// message the failed one already wrote into.
++					apiErrorRetryResult = { retry: true, advanceFallbackModel: true };
++					runState.setState({
++						hasErrored: false,
++						apiError: void 0,
++						deferredErrorChunk: void 0
++					});
+ 				}
+ 			}
+ 			if (apiErrorRetryResult?.retry && options?.abortSignal?.aborted) {
+@@ -25340,7 +25357,11 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 				cleanupProviderToolSpans(true);
+ 				const currentProcessorRetryCount = inputData.processorRetryCount || 0;
+ 				const steps = inputData.output?.steps || [];
+-				const nextProcessorRetryCount = currentProcessorRetryCount + 1;
++				const advancingFallbackModel = apiErrorRetryResult.advanceFallbackModel === true;
++				const nextFallbackModelIndex = advancingFallbackModel ? activeFallbackModelIndex + 1 : activeFallbackModelIndex;
++				// A model switch gets its own retry budget instead of inheriting the
++				// exhausted count from the model it is replacing.
++				const nextProcessorRetryCount = advancingFallbackModel ? 0 : currentProcessorRetryCount + 1;
+ 				const messages = {
+ 					all: messageList.get.all.aiV5.model(),
+ 					user: messageList.get.input.aiV5.model(),
+@@ -25368,7 +25389,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 					},
+ 					messages,
+ 					processorRetryCount: nextProcessorRetryCount,
+-					...activeFallbackModelIndex > 0 ? { fallbackModelIndex: activeFallbackModelIndex } : {}
++					...nextFallbackModelIndex > 0 ? { fallbackModelIndex: nextFallbackModelIndex } : {}
+ 				};
+ 			}
+ 			if (runState.state.deferredErrorChunk && runState.state.hasErrored) {
+diff --git a/dist/agent-DV08WDfY.js b/dist/agent-DV08WDfY.js
+index 3a4acb3..00471ff 100644
+--- a/dist/agent-DV08WDfY.js
++++ b/dist/agent-DV08WDfY.js
+@@ -19659,7 +19659,10 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
+ 			continue;
+ 		}
+ 		if (chunk.type === "step-finish") {
+-			if (toolDisplay !== "grouped") await closeSession();
++			// A continued step (retry, in-place or fallback-model escalation) means the
++			// run is still alive: closing here would finalize the message early.
++			const stepIsContinued = chunk.payload?.stepResult?.isContinued === true;
++			if (toolDisplay !== "grouped" && !stepIsContinued) await closeSession();
+ 			continue;
+ 		}
+ 		if (chunk.type === "file") {
+@@ -19672,7 +19675,8 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
+ 			continue;
+ 		}
+ 		if (chunk.type === "finish") {
+-			await closeSession();
++			// The session is closed once after the loop, so leaving it open here lets
++			// a fallback escalation keep streaming into the same message.
+ 			tracker.reset();
+ 			continue;
+ 		}
+@@ -25318,6 +25322,19 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 						apiError: void 0,
+ 						deferredErrorChunk: void 0
+ 					});
++				} else if (activeFallbackModelIndex + 1 < models.length) {
++					// Stock only advances the fallback index when the model call throws.
++					// An error delivered as an in-band stream chunk returns normally, so
++					// without this the remaining models are never tried. Escalate inside
++					// the retry path (isContinued) rather than throwing, so the response
++					// message id rotates and the next model doesn't stream into the
++					// message the failed one already wrote into.
++					apiErrorRetryResult = { retry: true, advanceFallbackModel: true };
++					runState.setState({
++						hasErrored: false,
++						apiError: void 0,
++						deferredErrorChunk: void 0
++					});
+ 				}
+ 			}
+ 			if (apiErrorRetryResult?.retry && options?.abortSignal?.aborted) {
+@@ -25338,7 +25355,11 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 				cleanupProviderToolSpans(true);
+ 				const currentProcessorRetryCount = inputData.processorRetryCount || 0;
+ 				const steps = inputData.output?.steps || [];
+-				const nextProcessorRetryCount = currentProcessorRetryCount + 1;
++				const advancingFallbackModel = apiErrorRetryResult.advanceFallbackModel === true;
++				const nextFallbackModelIndex = advancingFallbackModel ? activeFallbackModelIndex + 1 : activeFallbackModelIndex;
++				// A model switch gets its own retry budget instead of inheriting the
++				// exhausted count from the model it is replacing.
++				const nextProcessorRetryCount = advancingFallbackModel ? 0 : currentProcessorRetryCount + 1;
+ 				const messages = {
+ 					all: messageList.get.all.aiV5.model(),
+ 					user: messageList.get.input.aiV5.model(),
+@@ -25366,7 +25387,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+ 					},
+ 					messages,
+ 					processorRetryCount: nextProcessorRetryCount,
+-					...activeFallbackModelIndex > 0 ? { fallbackModelIndex: activeFallbackModelIndex } : {}
++					...nextFallbackModelIndex > 0 ? { fallbackModelIndex: nextFallbackModelIndex } : {}
+ 				};
+ 			}
+ 			if (runState.state.deferredErrorChunk && runState.state.hasErrored) {

@@ -1,12 +1,12 @@
 import type { ToolsInput } from '@mastra/core/agent';
 import type { RequestContext } from '@mastra/core/request-context';
-import { createCodeMode } from '@mastra/core/tools';
-import { createWorkspaceTools } from '@mastra/core/workspace';
+import { createCodeMode, createCodeModeTool } from '@mastra/core/tools';
 import { E2BCodeModeTransport } from '@mastra/e2b';
 import { sandbox as sandboxConfig } from '../../config';
 import { mcpTools } from '../../mcp';
-import { codeModeFilesPrompt, codeModePrompt } from '../../prompts/code-mode';
-import { codeModeToolNames, getSandbox, workspace } from '../../workspace';
+import { codeModePrompt } from '../../prompts/features/code-mode';
+import { codeModeToolNames, getSandbox } from '../../workspace';
+import { workspaceTools } from '../../workspace/tools';
 import { canvasTools } from '../canvas';
 import { grepTool } from '../grep';
 import { slackTools } from '../slack';
@@ -30,16 +30,10 @@ const slackCodeTools = {
   lookup_canvas_sections: canvasTools.lookup_canvas_sections,
 };
 
-// Built per request, not once at module load: each set carries its own
-// read-before-write tracker and write lock, and sharing those across threads
-// would let one thread's sandbox satisfy or stale-fail another's writes.
 async function getSandboxTools(
   requestContext?: RequestContext
 ): Promise<ToolsInput> {
-  const tools = await createWorkspaceTools(workspace, {
-    workspace,
-    requestContext,
-  });
+  const tools = await workspaceTools(requestContext);
   return {
     ...Object.fromEntries(
       Object.entries(tools).filter(([name]) => codeModeToolNames.has(name))
@@ -49,11 +43,11 @@ async function getSandboxTools(
 }
 
 async function createCodeModeInstance({
-  sandboxAccess,
+  workspaceAccess,
 }: {
-  sandboxAccess: boolean;
+  workspaceAccess: boolean;
 }) {
-  const tools = sandboxAccess
+  const tools = workspaceAccess
     ? { ...slackCodeTools, ...(await getSandboxTools()) }
     : slackCodeTools;
   const modeConfig = { id: 'slack', timeout: sandboxConfig.timeout, tools };
@@ -67,13 +61,12 @@ async function createCodeModeInstance({
     if (!sandbox) {
       throw new Error('No E2B sandbox available for Slack code mode.');
     }
-    const {
-      tool: { execute },
-    } = createCodeMode(
+
+    const { execute } = createCodeModeTool(
       {
         ...modeConfig,
         sandbox,
-        tools: sandboxAccess
+        tools: workspaceAccess
           ? {
               ...slackCodeTools,
               ...(await getSandboxTools(context.requestContext)),
@@ -91,14 +84,18 @@ async function createCodeModeInstance({
   return mode;
 }
 
-export const slackCodeMode = await createCodeModeInstance({
-  sandboxAccess: true,
+export const workspaceCodeMode = await createCodeModeInstance({
+  workspaceAccess: true,
 });
-export const slackCodeModePrompt = `${codeModePrompt(slackCodeMode.instructions)}\n\n${codeModeFilesPrompt}`;
+export const workspaceCodeModePrompt = codeModePrompt({
+  instructions: workspaceCodeMode.instructions,
+  files: true,
+});
 
-export const readOnlySlackCodeMode = await createCodeModeInstance({
-  sandboxAccess: false,
+export const slackCodeMode = await createCodeModeInstance({
+  workspaceAccess: false,
 });
-export const readOnlySlackCodeModePrompt = codeModePrompt(
-  readOnlySlackCodeMode.instructions
-);
+export const slackCodeModePrompt = codeModePrompt({
+  instructions: slackCodeMode.instructions,
+  files: false,
+});
