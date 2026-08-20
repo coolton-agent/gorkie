@@ -31,9 +31,6 @@ export const status: TypingStatusFn = (chunk, context) => {
   }
 
   const { toolName } = chunk.payload;
-  if (context.channelTools.has(toolName)) {
-    return false;
-  }
 
   if (toolName.startsWith('agent-')) {
     const rest = toolName.slice(6);

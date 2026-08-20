@@ -11,8 +11,9 @@ export class SlackAgentAdapter extends SlackAdapter {
   // A scheduled run wakes an idle thread with no live message, so Chat SDK
   // can't supply the recipient_user_id/team_id that Slack's native streaming
   // needs outside a DM, and tool cards get dropped. Remember it per thread from
-  // live messages so those runs reuse it. Postgres is the source of truth
-  // (survives restarts); the Map only throttles writes.
+  // live messages so those runs reuse it. Both layers are in-process:
+  // MastraStateAdapter keeps cache entries in memory, so neither survives a
+  // restart, and the thread re-learns its recipient from the next live message.
   private readonly recipients = new Map<string, Recipient>();
 
   private recipientKey(threadId: string): string {

@@ -23,6 +23,7 @@ import { userMCPTools } from '../mcp/user-servers';
 import { clearStatus } from '../processors/clear-status';
 import { delegatedTools } from '../processors/delegated-tools';
 import { sandbox } from '../processors/sandbox';
+import { turnFooter } from '../processors/turn-footer';
 import { workingModel } from '../processors/working-model';
 import { instructions } from '../prompts';
 import {
@@ -115,6 +116,7 @@ const orchestrator = new Agent({
     delegatedTools,
     sandbox,
     clearStatus,
+    turnFooter,
     workingModel(config.id),
   ],
   tools: async ({ requestContext }) => {

@@ -6,9 +6,7 @@ import { customInstructionsBlocks } from './custom-instructions';
 import { mcpServersBlocks } from './mcp-servers';
 import { scheduledTasksBlocks } from './scheduled-tasks';
 
-export async function buildHomeView(
-  userId: string
-): Promise<Record<string, unknown>> {
+async function buildHomeView(userId: string): Promise<Record<string, unknown>> {
   const [instructions, mcpServers] = await Promise.all([
     getInstructions(userId),
     listMCPServers(userId),

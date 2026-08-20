@@ -1,4 +1,4 @@
-import { type ColumnType, type Selectable, sql } from 'kysely';
+import { type ColumnType, sql } from 'kysely';
 import { db } from '../client';
 
 export interface UserSettingsTable {
@@ -6,8 +6,6 @@ export interface UserSettingsTable {
   updated_at: ColumnType<Date, Date, Date>;
   user_id: string;
 }
-
-export type UserSettingsRow = Selectable<UserSettingsTable>;
 
 export async function createUserSettingsTable(): Promise<void> {
   await db.schema

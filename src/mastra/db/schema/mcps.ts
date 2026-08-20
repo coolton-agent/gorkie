@@ -1,4 +1,4 @@
-import { type ColumnType, type Selectable, sql } from 'kysely';
+import { type ColumnType, sql } from 'kysely';
 import { db } from '../client';
 
 export interface MCPServersTable {
@@ -9,8 +9,6 @@ export interface MCPServersTable {
   url: string;
   user_id: string;
 }
-
-export type MCPServerRow = Selectable<MCPServersTable>;
 
 export async function createMCPServersTable(): Promise<void> {
   await db.schema

@@ -50,3 +50,7 @@ output.txt
 *.duckdb.wal
 
 *.log
+
+# Crash dumps
+/core
+/core.*

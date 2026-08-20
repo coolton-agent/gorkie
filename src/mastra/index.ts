@@ -5,7 +5,6 @@ import {
   MastraPlatformExporter,
   MastraStorageExporter,
   Observability,
-  SensitiveDataFilter,
 } from '@mastra/observability';
 import { env } from '@/env';
 import { exploreAgent as explore } from './agents/explore';
@@ -60,7 +59,6 @@ export const mastra = new Mastra({
             projectId: env.MASTRA_PROJECT_ID,
           }),
         ],
-        spanOutputProcessors: [new SensitiveDataFilter()],
       },
     },
   }),

@@ -104,6 +104,9 @@ first balanced object.
 
 ### 2.1 No E2B filesystem provider
 
+Filed as [#21875](https://github.com/mastra-ai/mastra/issues/21875). Still
+absent in `@mastra/e2b@0.9.0`.
+
 `@mastra/e2b` exports `E2BSandbox` and `E2BCodeModeTransport` but no
 `MastraFilesystem`. `src/mastra/workspace/filesystem.ts` is a 527-line
 hand-written `E2BFilesystem`: path resolution, read/write/edit, stat, list,
@@ -160,19 +163,38 @@ are not the agent's problem and the tool set does not need restating.
 so there is no per-request tool resolution, unlike `Agent.tools` which accepts a
 `({ requestContext }) => tools` function.
 
-`src/mastra/tools/code-mode/slack.ts:62-89` therefore overrides
-`mode.tool.execute` and rebuilds the entire code mode  on every call,
-just to get per-request tools. It has to: `createWorksinstancepaceTools` bakes a
-read-before-write tracker and write lock into each tool set, and sharing those
-across threads would let one thread's sandbox satisfy or stale-fail another
-thread's writes.
+`src/mastra/tools/code-mode/slack.ts` therefore overrides `mode.tool.execute`
+and rebuilds the code mode instance on every call, just to get per-request
+tools. It has to: `createWorkspaceTools` bakes a read-before-write tracker and
+write lock into each tool set, and sharing those across threads would let one
+thread's sandbox satisfy or stale-fail another thread's writes.
 
 Native fix: accept `tools` as a function of the request context, the same shape
 `Agent` already accepts. That deletes the `execute` override entirely.
 
-Note that `config.sandbox ?? ctx?.workspace?.sandbox` already resolves the
-sandbox per request, so the sandbox half of this is fine. It is only the tools
-that are frozen.
+### 3.2 Code mode does not resolve a resolver-backed sandbox
+
+Filed as [#21886](https://github.com/mastra-ai/mastra/issues/21886).
+
+`createCodeModeTool` reads `config.sandbox ?? ctx?.workspace?.sandbox`, and the
+`Workspace.sandbox` getter returns only `this._sandbox`, which stays undefined
+when the sandbox was supplied as a resolver. Every workspace tool avoids this by
+going through `resolveEffectiveWorkspace`, which calls `workspace.resolveSandbox`
+and returns a proxy; code mode never calls it. So the sandbox half is *not*
+fine, and is the second reason the `execute` override cannot be deleted.
+
+### 3.3 Generated instructions ignore `config.id`
+
+Filed as [#21885](https://github.com/mastra-ai/mastra/issues/21885).
+
+`USAGE_CONTRACT` is a module constant naming the tool `execute_typescript`, and
+`createCodeModeInstructions` never reads `config.id`. A tool created with
+`id: 'slack'` is described to the model as `execute_typescript`, so
+`src/mastra/prompts/features/code-mode.ts` has to run
+`instructions.replaceAll('execute_typescript', 'slack')`. The same string also
+hardcodes "Do not rely on filesystem, network, or process access", which is
+wrong once code mode holds workspace file tools, forcing the `<files>` section
+to explicitly override it.
 
 ## 4. Channels
 
@@ -301,6 +323,22 @@ steps and nothing at all on a single-step turn.
 
 Native fix: track per-model health in the fallback resolver, with a configurable
 cooldown, and prefer the healthy model without the caller reordering the array.
+
+Caveat found while auditing: `chat().getState()` resolves to
+`MastraStateAdapter`, whose `get`/`set` are an in-process `Map`, so the
+working-model cache does not survive a restart and is not shared between
+instances. The 30 minute TTL is bounded by process lifetime.
+
+### 5.3 Fallback models never advance on a mid-stream error
+
+Filed as [#21876](https://github.com/mastra-ai/mastra/issues/21876).
+
+`executeStreamWithFallbackModels` advances the model index only in its `catch`,
+so an error delivered as an in-band stream chunk (the callback returns normally
+with `hasErrored` set) marks the loop done and skips every remaining model. The
+in-place retry path does not cover it either: once `canRetryError` is false
+there is no branch that moves to the next model. This is what the
+`advanceFallbackModel` hunk in our patch adds.
 
 ### 5.2 Tool-result images are not provider-portable
 

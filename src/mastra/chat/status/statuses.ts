@@ -159,6 +159,12 @@ export const statuses: Record<string, (args: Args) => string> = {
       : 'is looking for a skill…';
   },
   slack: () => 'is working in Slack…',
+  submit_feedback: (args) => {
+    const kind = str(args, 'kind');
+    return kind && kind !== 'other'
+      ? fit('is passing on your ', kind, '…')
+      : 'is passing on your feedback…';
+  },
   summarize_thread: (args) => {
     const instructions = str(args, 'instructions');
     return instructions
