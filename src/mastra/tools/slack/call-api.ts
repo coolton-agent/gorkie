@@ -2,6 +2,7 @@ import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { slack } from '../../chat/client';
 import { channelContext } from '../../lib/context';
+import { spendSlackBudget } from '../../lib/slack-budget';
 import { input, optionalCursor, output } from '../../types/tools/index';
 import { getSandbox, sandboxPath as p } from '../../workspace';
 import { assertReadableChannel, joinChannel } from './utils';
@@ -73,6 +74,7 @@ Responses are unshaped and can be large, so the full JSON is always written to a
     },
   },
   execute: async ({ method, params }, context) => {
+    spendSlackBudget({ cost: 20, requestContext: context?.requestContext });
     if (!readMethod.test(method)) {
       throw new Error(
         `${method} is not an allowed Slack read method. Use post_message, react, or upload_file to change anything in Slack.`

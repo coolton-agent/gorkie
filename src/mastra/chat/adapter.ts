@@ -2,13 +2,6 @@ import { SlackAdapter } from '@chat-adapter/slack';
 
 const mentionPattern = /<@([A-Z0-9_]+)(?:\|([^<>]+))?>/g;
 
-const MENTION_LOOKUPS = 4;
-const UNRESOLVED_TTL_MS = 60_000;
-
-// The adapter caches a resolved user but not a failed lookup, so without this a
-// rate-limited id is retried on every message that mentions it.
-const unresolvedUntil = new Map<string, number>();
-
 interface Recipient {
   teamId: string;
   userId: string;
@@ -137,26 +130,12 @@ export class SlackAgentAdapter extends SlackAdapter {
       missingIds.add(userId);
     }
 
-    // A history-heavy turn can carry dozens of distinct mentions. Resolving
-    // them all at once is what tripped Slack's users.info limit, and a failed
-    // lookup is not cached by the adapter, so every retry re-fired the burst.
-    const pending = [...missingIds].filter(
-      (userId) => (unresolvedUntil.get(userId) ?? 0) <= Date.now()
+    await Promise.all(
+      [...missingIds].map(async (userId) => {
+        const user = await this.lookupUser(userId);
+        mentionNames.set(userId, user?.displayName ?? userId);
+      })
     );
-    for (let index = 0; index < pending.length; index += MENTION_LOOKUPS) {
-      // biome-ignore lint/performance/noAwaitInLoops: sequencing the batches is the throttle
-      await Promise.all(
-        pending.slice(index, index + MENTION_LOOKUPS).map(async (userId) => {
-          const user = await this.lookupUser(userId);
-          if (user?.displayName) {
-            unresolvedUntil.delete(userId);
-            mentionNames.set(userId, user.displayName);
-            return;
-          }
-          unresolvedUntil.set(userId, Date.now() + UNRESOLVED_TTL_MS);
-        })
-      );
-    }
 
     if (mentionNames.size === 0) {
       return text;

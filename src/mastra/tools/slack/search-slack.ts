@@ -5,6 +5,7 @@ import { chat } from '../../chat/instance';
 import { threadState } from '../../chat/state';
 import { channelContext } from '../../lib/context';
 import { chatChannelId } from '../../lib/ids';
+import { spendSlackBudget } from '../../lib/slack-budget';
 import { input, output } from '../../types/tools/index';
 
 const contextMessageSchema = z
@@ -105,6 +106,7 @@ export const searchSlackTool = createTool({
     },
   },
   execute: async ({ query, cursor }, context) => {
+    spendSlackBudget({ cost: 20, requestContext: context?.requestContext });
     const { threadId } = channelContext(context?.requestContext);
     const thread = threadId ? chat().thread(threadId) : undefined;
     const state = await threadState(thread);

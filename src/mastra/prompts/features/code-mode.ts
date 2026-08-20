@@ -25,7 +25,9 @@ export function codeModePrompt({
 }): string {
   return `\
 <code-mode>
-Slack code mode is for several Slack reads, exhaustive pagination, filtering, joining, deduplication, sorting, counting, aggregation, and MCP tool calls that benefit from code-side orchestration. Use direct tools for single lookups. Only the external_* functions declared below can reach your tools. Return final results, not intermediate pages.
+Slack code mode is for several Slack reads, paging, filtering, joining, deduplication, sorting, counting, aggregation, and MCP tool calls that benefit from code-side orchestration. Use direct tools for single lookups. Only the external_* functions declared below can reach your tools. Return final results, not intermediate pages.
+
+Reads are metered per message, not per call, because Slack resolves the author of every message you fetch. A loop over every page of several channels can exhaust the workspace's rate limit for everyone within a minute, and the turn is cut off with nothing to show for it. Ask for the narrowest range that answers the question, prefer a bigger page size over more pages, stop as soon as you have enough, and say what you sampled rather than silently reading everything. A turn that reads past its budget fails outright.
 
 ${instructions.replaceAll('execute_typescript', 'slack')}
 ${files ? filesSection : ''}</code-mode>`;
