@@ -91,11 +91,15 @@ export class SlackAgentAdapter extends SlackAdapter {
     });
   }
 
-  async postBlocks(
-    threadId: string,
-    text: string,
-    blocks: unknown[]
-  ): Promise<void> {
+  async postBlocks({
+    blocks,
+    text,
+    threadId,
+  }: {
+    blocks: unknown[];
+    text: string;
+    threadId: string;
+  }): Promise<void> {
     const { channel, threadTs } = this.decodeThreadId(threadId);
     await this._client.chat.postMessage(
       await this.withToken({ channel, thread_ts: threadTs, text, blocks })

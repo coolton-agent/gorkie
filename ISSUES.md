@@ -23,8 +23,8 @@ as vendored in `node_modules/`.
 
 ## 1. Patched `@mastra/core`
 
-`patches/@mastra+core@1.59.0.patch` carries five behavioural fixes, applied to
-`dist/agent-*.{js,cjs}` and `dist/trip-wire-*.{js,cjs}`. `scripts/postbuild.ts`
+`patches/@mastra+core@1.60.1-alpha.0.patch` carries two behavioural fixes, applied to
+`dist/agent-*.{js,cjs}`. `scripts/postbuild.ts`
 exists only to copy `patches/` and `patchedDependencies` into `.mastra/output`
 so a built server keeps them.
 
@@ -135,11 +135,11 @@ In the agent bundle the request-resolved tool map spreads `assignedTools` first
 and `workspaceTools` later. A tool defined in the agent's `tools:` config under
 the same name as a workspace tool is overwritten with no warning.
 
-Worked around for `execute_command`: the built-in is renamed to `run_command`
-through the workspace tools config so our own titled `execute_command` wrapper
-(`src/mastra/tools/execute-command.ts`) can own the name and delegate to it. The
-cost is that `run_command` stays visible to the model, since the agent's `tools:`
-config cannot remove a workspace tool from the list either.
+This blocked giving `execute_command` a model-authored title for the typing
+status. A wrapper was built and reverted: the only way to own the name is to
+rename the built-in through the workspace tools config, and the renamed tool
+stays visible to the model anyway, since the agent's `tools:` config cannot
+remove a workspace tool from the list either. Not worth the duplicate tool.
 
 Native fix: let the agent's explicit `tools:` win, or at minimum warn on
 collision.
@@ -257,9 +257,10 @@ Filed upstream: [mastra-ai/mastra#21880](https://github.com/mastra-ai/mastra/iss
 Result: `src/mastra/chat/status/statuses.ts` is a 185-line lookup table keyed by
 tool name, hand-maintained in parallel with the tool definitions, drifting from
 them, and structurally unable to cover MCP or otherwise dynamically registered
-tools. `TODO.md` still lists one known hole (code-mode `slack` shows a flat "is
-working in Slack..."); `execute_command` now carries a model-authored `title`
-argument purely so the status line has something to render.
+tools. `TODO.md` still lists one known hole: code-mode `slack` shows a flat "is
+working in Slack...", and `execute_command` shows the raw shell command, since
+a wrapper adding a model-authored title was reverted as not worth a duplicate
+visible tool.
 
 Native fix: let a tool declare its in-progress label next to its other display
 transforms, and have `defaultTypingStatus` use it.

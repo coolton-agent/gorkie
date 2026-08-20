@@ -10,8 +10,6 @@ export const feedbackIds = {
   modal: 'message_feedback_modal',
 };
 
-const directionSchema = z.enum(['up', 'down']);
-
 const metadataSchema = z.object({
   messageId: z.string().optional(),
   threadId: z.string(),
@@ -21,10 +19,11 @@ const metadataSchema = z.object({
 export function feedbackBlock(
   traceId: string | undefined
 ): Record<string, unknown> {
+  const suffix = traceId ?? '';
   return buildFeedbackButtonsBlock({
     actionId: feedbackIds.action,
-    positiveValue: `up:${traceId}`,
-    negativeValue: `down:${traceId}`,
+    positiveValue: `up:${suffix}`,
+    negativeValue: `down:${suffix}`,
   });
 }
 
@@ -65,7 +64,7 @@ async function recordFeedback({
 
 export async function onFeedbackClick(event: ActionEvent): Promise<void> {
   const [prefix, traceId] = (event.value ?? '').split(':');
-  const direction = directionSchema.safeParse(prefix).data;
+  const direction = z.enum(['up', 'down']).safeParse(prefix).data;
   if (!direction) {
     logger.warn('[feedback] click carried no rating', {
       raw: event.raw,
