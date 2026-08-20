@@ -165,6 +165,14 @@
     "nvmrc",
     "pino",
     "resolvedAgent",
-    "memoize"
+    "memoize",
+    "behavioural",
+    "cooldown",
+    "pydub",
+    "showable",
+    "unpushed",
+    "unvalidated",
+    "worktree",
+    "Ywkz"
   ]
 }
