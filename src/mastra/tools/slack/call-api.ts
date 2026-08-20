@@ -3,8 +3,7 @@ import { z } from 'zod';
 import { slack } from '../../chat/client';
 import { channelContext } from '../../lib/context';
 import { input, optionalCursor, output } from '../../types/tools/index';
-import { getSandbox } from '../../workspace';
-import { p } from '../../workspace/path';
+import { getSandbox, sandboxPath as p } from '../../workspace';
 import { assertReadableChannel, joinChannel } from './utils';
 
 const readMethod =

@@ -1,12 +1,12 @@
 import type { ToolsInput } from '@mastra/core/agent';
 import type { RequestContext } from '@mastra/core/request-context';
 import { createCodeMode, createCodeModeTool } from '@mastra/core/tools';
-import { createWorkspaceTools } from '@mastra/core/workspace';
 import { E2BCodeModeTransport } from '@mastra/e2b';
 import { sandbox as sandboxConfig } from '../../config';
 import { mcpTools } from '../../mcp';
 import { codeModePrompt } from '../../prompts/features/code-mode';
-import { codeModeToolNames, getSandbox, workspace } from '../../workspace';
+import { codeModeToolNames, getSandbox } from '../../workspace';
+import { workspaceTools } from '../../workspace/tools';
 import { canvasTools } from '../canvas';
 import { grepTool } from '../grep';
 import { slackTools } from '../slack';
@@ -33,10 +33,7 @@ const slackCodeTools = {
 async function getSandboxTools(
   requestContext?: RequestContext
 ): Promise<ToolsInput> {
-  const tools = await createWorkspaceTools(workspace, {
-    workspace,
-    requestContext,
-  });
+  const tools = await workspaceTools(requestContext);
   return {
     ...Object.fromEntries(
       Object.entries(tools).filter(([name]) => codeModeToolNames.has(name))
@@ -46,11 +43,11 @@ async function getSandboxTools(
 }
 
 async function createCodeModeInstance({
-  sandboxAccess,
+  workspaceAccess,
 }: {
-  sandboxAccess: boolean;
+  workspaceAccess: boolean;
 }) {
-  const tools = sandboxAccess
+  const tools = workspaceAccess
     ? { ...slackCodeTools, ...(await getSandboxTools()) }
     : slackCodeTools;
   const modeConfig = { id: 'slack', timeout: sandboxConfig.timeout, tools };
@@ -69,7 +66,7 @@ async function createCodeModeInstance({
       {
         ...modeConfig,
         sandbox,
-        tools: sandboxAccess
+        tools: workspaceAccess
           ? {
               ...slackCodeTools,
               ...(await getSandboxTools(context.requestContext)),
@@ -87,18 +84,18 @@ async function createCodeModeInstance({
   return mode;
 }
 
-export const slackCodeMode = await createCodeModeInstance({
-  sandboxAccess: true,
+export const workspaceCodeMode = await createCodeModeInstance({
+  workspaceAccess: true,
 });
-export const slackCodeModePrompt = codeModePrompt({
-  instructions: slackCodeMode.instructions,
+export const workspaceCodeModePrompt = codeModePrompt({
+  instructions: workspaceCodeMode.instructions,
   files: true,
 });
 
-export const readOnlySlackCodeMode = await createCodeModeInstance({
-  sandboxAccess: false,
+export const slackCodeMode = await createCodeModeInstance({
+  workspaceAccess: false,
 });
-export const readOnlySlackCodeModePrompt = codeModePrompt({
-  instructions: readOnlySlackCodeMode.instructions,
+export const slackCodeModePrompt = codeModePrompt({
+  instructions: slackCodeMode.instructions,
   files: false,
 });

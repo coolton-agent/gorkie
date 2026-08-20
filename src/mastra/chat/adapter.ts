@@ -91,6 +91,17 @@ export class SlackAgentAdapter extends SlackAdapter {
     });
   }
 
+  async postBlocks(
+    threadId: string,
+    text: string,
+    blocks: unknown[]
+  ): Promise<void> {
+    const { channel, threadTs } = this.decodeThreadId(threadId);
+    await this._client.chat.postMessage(
+      await this.withToken({ channel, thread_ts: threadTs, text, blocks })
+    );
+  }
+
   protected override async resolveInlineMentions(
     text: string,
     skipSelfMention: boolean

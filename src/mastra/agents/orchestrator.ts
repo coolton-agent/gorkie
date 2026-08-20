@@ -30,7 +30,7 @@ import {
   orchestrator as orchestratorModel,
   summarizer as summarizerModel,
 } from '../providers';
-import { slackCodeModePrompt } from '../tools/code-mode/slack';
+import { workspaceCodeModePrompt } from '../tools/code-mode/slack';
 import { deferredTools, orchestratorTools } from '../tools/toolsets';
 import { workspace } from '../workspace';
 import { exploreAgent } from './explore';
@@ -42,7 +42,7 @@ const orchestrator = new Agent({
   instructions: async ({ requestContext }) => {
     const messages = [
       ...instructions(requestContext),
-      { role: 'system' as const, content: slackCodeModePrompt },
+      { role: 'system' as const, content: workspaceCodeModePrompt },
     ];
     const { userId } = channelContext(requestContext);
     const userInstructions = userId

@@ -135,10 +135,11 @@ In the agent bundle the request-resolved tool map spreads `assignedTools` first
 and `workspaceTools` later. A tool defined in the agent's `tools:` config under
 the same name as a workspace tool is overwritten with no warning.
 
-This blocks wrapping `execute_command` to give it a model-authored typing-status
-title: the wrapper is shadowed, and disabling the built-in in the workspace
-config also breaks the wrapper's own delegation call, since both resolve through
-the same shared `Workspace` instance. Detailed in `TODO.md`.
+Worked around for `execute_command`: the built-in is renamed to `run_command`
+through the workspace tools config so our own titled `execute_command` wrapper
+(`src/mastra/tools/execute-command.ts`) can own the name and delegate to it. The
+cost is that `run_command` stays visible to the model, since the agent's `tools:`
+config cannot remove a workspace tool from the list either.
 
 Native fix: let the agent's explicit `tools:` win, or at minimum warn on
 collision.
@@ -256,8 +257,9 @@ Filed upstream: [mastra-ai/mastra#21880](https://github.com/mastra-ai/mastra/iss
 Result: `src/mastra/chat/status/statuses.ts` is a 185-line lookup table keyed by
 tool name, hand-maintained in parallel with the tool definitions, drifting from
 them, and structurally unable to cover MCP or otherwise dynamically registered
-tools. `TODO.md` lists two known holes already (`execute_command` shows the raw
-shell command, code-mode `slack` shows a flat "is working in Slack...").
+tools. `TODO.md` still lists one known hole (code-mode `slack` shows a flat "is
+working in Slack..."); `execute_command` now carries a model-authored `title`
+argument purely so the status line has something to render.
 
 Native fix: let a tool declare its in-progress label next to its other display
 transforms, and have `defaultTypingStatus` use it.

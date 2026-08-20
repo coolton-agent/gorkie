@@ -2,8 +2,9 @@ import type {
   ProcessOutputResultArgs,
   ProcessOutputStepArgs,
 } from '@mastra/core/processors';
-import { Card, CardText } from 'chat';
+import { formatDuration, intervalToDuration } from 'date-fns';
 import { slack } from '../chat/client';
+import { feedbackBlock } from '../chat/feedback';
 import { channelContext } from '../lib/context';
 import { logger } from '../lib/logger';
 
@@ -11,7 +12,7 @@ export const turnFooter = {
   id: 'turn-footer',
   name: 'Turn Footer',
   description:
-    'Posts a small footer once a turn ends, so a reader can tell where one response stopped and how long it took.',
+    'Closes a turn with how long it took and a thumbs rating for the response.',
   processOutputStep(args: ProcessOutputStepArgs) {
     args.state.startTime ??= Date.now();
     return args.messages;
@@ -22,17 +23,23 @@ export const turnFooter = {
     if (!threadId || typeof startTime !== 'number') {
       return args.messages;
     }
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    await slack
-      .postMessage(
-        threadId,
-        Card({
-          children: [CardText(`_done in ${elapsed}s_`, { style: 'muted' })],
-        })
-      )
-      .catch((error: unknown) =>
-        logger.warn('[turn-footer] failed to post', { threadId, error })
-      );
+    const elapsed = formatDuration(
+      intervalToDuration({ start: startTime, end: Date.now() }),
+      { format: ['hours', 'minutes', 'seconds'] }
+    );
+    const text = `done in ${elapsed || 'under a second'}`;
+    const traceId = args.tracingContext?.currentSpan?.traceId;
+    try {
+      await slack.postBlocks(threadId, text, [
+        {
+          type: 'context',
+          elements: [{ type: 'mrkdwn', text: `_${text}_` }],
+        },
+        feedbackBlock(traceId),
+      ]);
+    } catch (error) {
+      logger.warn('[turn-footer] failed to post', { threadId, error });
+    }
     return args.messages;
   },
 };

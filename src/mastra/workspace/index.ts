@@ -31,6 +31,7 @@ export async function getSandbox(
   return sandbox instanceof E2BSandbox ? sandbox : undefined;
 }
 
+export { sandboxPath } from './path';
 export { codeModeToolNames, workspaceToolNames } from './tool-names';
 
 export const workspace: Workspace = new Workspace({

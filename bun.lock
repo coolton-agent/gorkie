@@ -19,6 +19,7 @@
         "@t3-oss/env-core": "^0.13.11",
         "ai": "^7.0.66",
         "chat": "^4.35.0",
+        "date-fns": "^4.4.0",
         "dotenv": "^17.4.2",
         "e2b": "^2.36.1",
         "exa-js": "^2.16.3",
@@ -812,6 +813,8 @@
     "cspell-lib": ["cspell-lib@10.0.1", "", { "dependencies": { "@cspell/cspell-bundled-dicts": "10.0.1", "@cspell/cspell-performance-monitor": "10.0.1", "@cspell/cspell-pipe": "10.0.1", "@cspell/cspell-resolver": "10.0.1", "@cspell/cspell-types": "10.0.1", "@cspell/dynamic-import": "10.0.1", "@cspell/filetypes": "10.0.1", "@cspell/rpc": "10.0.1", "@cspell/strong-weak-map": "10.0.1", "@cspell/url": "10.0.1", "cspell-config-lib": "10.0.1", "cspell-dictionary": "10.0.1", "cspell-glob": "10.0.1", "cspell-grammar": "10.0.1", "cspell-io": "10.0.1", "cspell-trie-lib": "10.0.1", "env-paths": "^4.0.0", "gensequence": "^8.0.8", "import-fresh": "^4.0.0", "resolve-from": "^5.0.0", "vscode-languageserver-textdocument": "^1.0.12", "vscode-uri": "^3.1.0", "xdg-basedir": "^5.1.0" } }, "sha512-RpsIPiLzc4/YMW8BMRKpyJ81x439qjYWcqgdKeXnMkbKM88J9PexzutfFf/4v97v96KzfNitEzMpbI0uj8OeUg=="],
 
     "cspell-trie-lib": ["cspell-trie-lib@10.0.1", "", { "peerDependencies": { "@cspell/cspell-types": "10.0.1" } }, "sha512-BFvhalSkRQFjKrZ//FKK7fRGrZFpifnxB5AwCkzsIsBZqicsfafcQ1xP21qpb0QqyV/IomjNgviG+tRJs+0rMw=="],
+
+    "date-fns": ["date-fns@4.4.0", "", {}, "sha512-+1UMbeh68lH1SegH83CGWwpb6OHHbpSgr3+s5Eww5M4CAgswBpoWS0AjTOfEJ33HiYKz1hdj/KTFprzXHmq/6w=="],
 
     "dateformat": ["dateformat@4.6.3", "", {}, "sha512-2P0p0pFGzHS5EMnhdxQi7aJN+iMheud0UhG4dlE1DLAlvL8JHjJJTX/CSm4JXwV0Ka5nGk3zC5mcb5bUQUxxMA=="],
 

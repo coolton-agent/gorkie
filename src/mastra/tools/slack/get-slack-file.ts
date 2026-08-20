@@ -5,8 +5,7 @@ import { env } from '@/env';
 import { slack } from '../../chat/client';
 import { sh } from '../../lib/utils';
 import { input, output } from '../../types/tools/index';
-import { getSandbox } from '../../workspace';
-import { p } from '../../workspace/path';
+import { getSandbox, sandboxPath as p } from '../../workspace';
 
 function formatBytes(value: number): string {
   if (value < 1024 * 1024) {
