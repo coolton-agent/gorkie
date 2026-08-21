@@ -42,6 +42,22 @@ async function getSandboxTools(
   };
 }
 
+const RESULT_LIMIT = 60_000;
+
+function capResult(outcome: unknown): unknown {
+  const size = JSON.stringify(outcome ?? null)?.length ?? 0;
+  if (size <= RESULT_LIMIT) {
+    return outcome;
+  }
+  return {
+    success: false,
+    error: {
+      message: `The program returned ${size} characters, over the ${RESULT_LIMIT} limit, so nothing was kept. Return a summary computed inside the program (counts, the few records that matter, a written answer) rather than the rows you read, or write the full data to a file and return its path.`,
+      name: 'ResultTooLarge',
+    },
+  };
+}
+
 async function createCodeModeInstance({
   workspaceAccess,
 }: {
@@ -78,7 +94,7 @@ async function createCodeModeInstance({
     if (!execute) {
       throw new Error('Slack code mode is not executable.');
     }
-    return execute(input, context);
+    return capResult(await execute(input, context));
   };
 
   return mode;
