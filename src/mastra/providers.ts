@@ -60,7 +60,7 @@ export const orchestrator = () =>
 
 export const summarizer: ModelWithRetries[] = [
   { model: hackclub('google/gemini-3.5-flash-lite'), maxRetries: 3 },
-  { model: hackclub('xiaomi/mimo-v2.5'), maxRetries: 3 },
+  { model: opencode('mimo-v2.5'), maxRetries: 3 },
 ];
 
 const scoutModels: ModelWithRetries[] = [
