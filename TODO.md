@@ -4,6 +4,8 @@ Keep this file limited to unresolved work that belongs in the reusable template.
 
 ## Simplification
 
+- [x] Delete the `instructions.replaceAll('execute_typescript', 'slack')` in `prompts/features/code-mode.ts`. It is dead as of the 1.61.0 bump: Mastra used to build code-mode instructions from a static `USAGE_CONTRACT` with the tool name hardcoded, and now parameterizes it as `createUsageContract(config.id ?? 'execute_typescript')` (mastra-ai/mastra#21920). We already pass `id: 'slack'`, so the literal can no longer appear and the replace can never match.
+- [x] Replace the Slack read budget (`lib/slack-budget.ts`, added in c4ba59c) with a fix for the amplification it meters. `parseSlackMessage` awaits `lookupUser(event.user)` per message and a page is parsed under `Promise.all`, and `lookupUser` has no in-flight dedup, so its cache write lands only after every concurrent read has already missed: a 200-message page from 5 authors fires ~200 `users.info` calls, not 5. Override `lookupUser` in `SlackAgentAdapter` (it is `protected`, and we already override `resolveInlineMentions`) with a per-id in-flight promise map plus the negative caching 676e586 only applied to mention resolution. Then the budget can be raised a long way, and should degrade softly rather than throwing: in code mode a thrown tool error surfaces as an exception inside the model's own program and loses the whole turn's work, and `read_conversation_history` currently throws *after* the fetch, so the API cost is paid and the data discarded.
 - [ ] Split `workspace/skills/taste-skill/SKILL.md` (~16.6k tokens, well over Mastra's <5k recommendation) into `references/`.
 
 ## Customization

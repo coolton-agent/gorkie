@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { slack } from '../../chat/client';
 import { channelContext } from '../../lib/context';
 import { chatChannelId } from '../../lib/ids';
-import { spendSlackBudget } from '../../lib/slack-budget';
+import { spendSlackCall } from '../../lib/slack-budget';
 import { input, output, slackMessageSchema } from '../../types/tools/index';
 import {
   assertReadableChannel,
@@ -66,16 +66,13 @@ export const readConversationHistoryTool = createTool({
     });
     await joinChannel(chId);
 
+    // Charged before the read, not after: charging after meant the page that
+    // broke the budget had already been paid for and was then thrown away.
+    spendSlackCall(context?.requestContext);
+
     const result = tid
       ? await slack.fetchMessages(tid, { limit, cursor })
       : await slack.fetchChannelMessages(chId, { limit, cursor });
-
-    // Charged per message, not per call: the author of each one is resolved
-    // separately, and that is what a paging loop actually spends.
-    spendSlackBudget({
-      cost: result.messages.length,
-      requestContext: context?.requestContext,
-    });
 
     return {
       channelId: chId,

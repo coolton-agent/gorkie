@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { slack } from '../../chat/client';
 import { channelContext } from '../../lib/context';
 import { chatChannelId } from '../../lib/ids';
-import { spendSlackBudget } from '../../lib/slack-budget';
+import { spendSlackCall } from '../../lib/slack-budget';
 import { input, output, slackMessageSchema } from '../../types/tools/index';
 import { assertReadableChannel, formatMessage, joinChannel } from './utils';
 
@@ -41,7 +41,7 @@ export const listThreadsTool = createTool({
     },
   },
   execute: async ({ channelId, limit, cursor }, context) => {
-    spendSlackBudget({ cost: limit, requestContext: context?.requestContext });
+    spendSlackCall(context?.requestContext);
     const ctx = channelContext(context?.requestContext);
     const id = channelId ?? ctx.channelId;
     if (!id) {

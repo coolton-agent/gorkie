@@ -2,6 +2,9 @@ import { SlackAdapter } from '@chat-adapter/slack';
 
 const mentionPattern = /<@([A-Z0-9_]+)(?:\|([^<>]+))?>/g;
 
+const MAX_USER_LOOKUPS = 4;
+const UNRESOLVED_TTL_MS = 60_000;
+
 interface Recipient {
   teamId: string;
   userId: string;
@@ -104,6 +107,66 @@ export class SlackAgentAdapter extends SlackAdapter {
     await this._client.chat.postMessage(
       await this.withToken({ channel, thread_ts: threadTs, text, blocks })
     );
+  }
+
+  // The adapter resolves the author of every message it parses, and a page is
+  // parsed under Promise.all, so 200 messages from five people fired 200
+  // users.info calls: lookupUser caches, but the write only lands after every
+  // concurrent read has already missed. Collapsing them onto one call per id is
+  // what makes a history read cost a handful of calls instead of one per
+  // message. The gate bounds the ids that are genuinely distinct, and a failed
+  // lookup is remembered because the adapter caches a resolved user but not a
+  // failed one, so without it a rate-limited id is retried on every message
+  // that mentions it.
+  private readonly userLookups = new Map<
+    string,
+    ReturnType<SlackAdapter['lookupUser']>
+  >();
+  private readonly unresolvedUntil = new Map<string, number>();
+  private activeLookups = 0;
+  private readonly waitingLookups: (() => void)[] = [];
+
+  protected override lookupUser(
+    ...args: Parameters<SlackAdapter['lookupUser']>
+  ): ReturnType<SlackAdapter['lookupUser']> {
+    const [userId] = args;
+    if ((this.unresolvedUntil.get(userId) ?? 0) > Date.now()) {
+      return Promise.resolve(null);
+    }
+    const inFlight = this.userLookups.get(userId);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const lookup = (async () => {
+      if (this.activeLookups >= MAX_USER_LOOKUPS) {
+        await new Promise<void>((resolve) => this.waitingLookups.push(resolve));
+      } else {
+        this.activeLookups++;
+      }
+      try {
+        const user = await super.lookupUser(userId);
+        if (user) {
+          this.unresolvedUntil.delete(userId);
+        } else {
+          this.unresolvedUntil.set(userId, Date.now() + UNRESOLVED_TTL_MS);
+        }
+        return user;
+      } finally {
+        this.userLookups.delete(userId);
+        // Hand the slot to the next waiter rather than freeing it, so a caller
+        // arriving in between cannot take it and push past the cap.
+        const next = this.waitingLookups.shift();
+        if (next) {
+          next();
+        } else {
+          this.activeLookups--;
+        }
+      }
+    })();
+
+    this.userLookups.set(userId, lookup);
+    return lookup;
   }
 
   protected override async resolveInlineMentions(
