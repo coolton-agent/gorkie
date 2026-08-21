@@ -12,6 +12,28 @@ export function slugOf(modelId: string): string {
     : modelId;
 }
 
+// OpenCode answers a bare `mimo-v2.5` for `opencode-go/mimo-v2.5`, so put the
+// provider back before anything compares this against the configured list.
+export function qualifiedSlug({
+  modelId,
+  modelProvider,
+}: {
+  modelId: string;
+  modelProvider?: string;
+}): string {
+  return modelProvider && !modelId.startsWith(`${modelProvider}/`)
+    ? slugOf(`${modelProvider}/${modelId}`)
+    : slugOf(modelId);
+}
+
+export function sameModel(entrySlug: string, recalled: string): boolean {
+  return (
+    entrySlug === recalled ||
+    entrySlug.endsWith(`/${recalled}`) ||
+    recalled.endsWith(`/${entrySlug}`)
+  );
+}
+
 export async function recallModel(
   agentKey: string
 ): Promise<string | undefined> {
@@ -20,26 +42,23 @@ export async function recallModel(
       (await chat().getState().get<string>(cacheKey(agentKey))) ?? undefined
     );
   } catch (err) {
-    logger.debug('[working-model] failed to read', { agentKey, err });
+    logger.warn('[working-model] failed to read', { agentKey, err });
   }
 }
 
 export async function rememberModel({
   agentKey,
   modelId,
+  modelProvider,
 }: {
   agentKey: string;
   modelId: string;
+  modelProvider?: string;
 }): Promise<void> {
+  const slug = qualifiedSlug({ modelId, modelProvider });
   try {
-    await chat()
-      .getState()
-      .set(cacheKey(agentKey), slugOf(modelId), workingModel.ttl);
+    await chat().getState().set(cacheKey(agentKey), slug, workingModel.ttl);
   } catch (err) {
-    logger.debug('[working-model] failed to persist', {
-      agentKey,
-      modelId,
-      err,
-    });
+    logger.warn('[working-model] failed to persist', { agentKey, err, slug });
   }
 }
