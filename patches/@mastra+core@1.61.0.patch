@@ -1,8 +1,8 @@
-diff --git a/dist/agent-BzwQJhke.cjs b/dist/agent-BzwQJhke.cjs
-index a37f2c0..d9f66c1 100644
---- a/dist/agent-BzwQJhke.cjs
-+++ b/dist/agent-BzwQJhke.cjs
-@@ -19661,7 +19661,10 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
+diff --git a/dist/agent-DSxJoGjY.js b/dist/agent-DSxJoGjY.js
+index 6c6adc5..203e49d 100644
+--- a/dist/agent-DSxJoGjY.js
++++ b/dist/agent-DSxJoGjY.js
+@@ -19664,7 +19664,10 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
  			continue;
  		}
  		if (chunk.type === "step-finish") {
@@ -14,7 +14,7 @@ index a37f2c0..d9f66c1 100644
  			continue;
  		}
  		if (chunk.type === "file") {
-@@ -19674,7 +19677,8 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
+@@ -19677,7 +19680,8 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
  			continue;
  		}
  		if (chunk.type === "finish") {
@@ -24,7 +24,7 @@ index a37f2c0..d9f66c1 100644
  			tracker.reset();
  			continue;
  		}
-@@ -25320,6 +25324,19 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -25323,6 +25327,19 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  						apiError: void 0,
  						deferredErrorChunk: void 0
  					});
@@ -44,7 +44,7 @@ index a37f2c0..d9f66c1 100644
  				}
  			}
  			if (apiErrorRetryResult?.retry && options?.abortSignal?.aborted) {
-@@ -25340,7 +25357,11 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -25343,7 +25360,11 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  				cleanupProviderToolSpans(true);
  				const currentProcessorRetryCount = inputData.processorRetryCount || 0;
  				const steps = inputData.output?.steps || [];
@@ -57,7 +57,7 @@ index a37f2c0..d9f66c1 100644
  				const messages = {
  					all: messageList.get.all.aiV5.model(),
  					user: messageList.get.input.aiV5.model(),
-@@ -25368,7 +25389,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -25371,7 +25392,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  					},
  					messages,
  					processorRetryCount: nextProcessorRetryCount,
@@ -66,11 +66,11 @@ index a37f2c0..d9f66c1 100644
  				};
  			}
  			if (runState.state.deferredErrorChunk && runState.state.hasErrored) {
-diff --git a/dist/agent-DV08WDfY.js b/dist/agent-DV08WDfY.js
-index 3a4acb3..00471ff 100644
---- a/dist/agent-DV08WDfY.js
-+++ b/dist/agent-DV08WDfY.js
-@@ -19659,7 +19659,10 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
+diff --git a/dist/agent-NkjbehmN.cjs b/dist/agent-NkjbehmN.cjs
+index be24982..abec1d5 100644
+--- a/dist/agent-NkjbehmN.cjs
++++ b/dist/agent-NkjbehmN.cjs
+@@ -19666,7 +19666,10 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
  			continue;
  		}
  		if (chunk.type === "step-finish") {
@@ -82,7 +82,7 @@ index 3a4acb3..00471ff 100644
  			continue;
  		}
  		if (chunk.type === "file") {
-@@ -19672,7 +19675,8 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
+@@ -19679,7 +19682,8 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
  			continue;
  		}
  		if (chunk.type === "finish") {
@@ -92,7 +92,7 @@ index 3a4acb3..00471ff 100644
  			tracker.reset();
  			continue;
  		}
-@@ -25318,6 +25322,19 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -25325,6 +25329,19 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  						apiError: void 0,
  						deferredErrorChunk: void 0
  					});
@@ -112,7 +112,7 @@ index 3a4acb3..00471ff 100644
  				}
  			}
  			if (apiErrorRetryResult?.retry && options?.abortSignal?.aborted) {
-@@ -25338,7 +25355,11 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -25345,7 +25362,11 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  				cleanupProviderToolSpans(true);
  				const currentProcessorRetryCount = inputData.processorRetryCount || 0;
  				const steps = inputData.output?.steps || [];
@@ -125,7 +125,7 @@ index 3a4acb3..00471ff 100644
  				const messages = {
  					all: messageList.get.all.aiV5.model(),
  					user: messageList.get.input.aiV5.model(),
-@@ -25366,7 +25387,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -25373,7 +25394,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  					},
  					messages,
  					processorRetryCount: nextProcessorRetryCount,
