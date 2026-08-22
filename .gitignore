@@ -57,3 +57,4 @@ output.txt
 
 # Screenshots dropped in the repo root
 /CleanShot*.png
+/trace-*.json

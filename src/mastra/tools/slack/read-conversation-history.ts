@@ -66,8 +66,8 @@ export const readConversationHistoryTool = createTool({
     });
     await joinChannel(chId);
 
-    // Charged before the read, not after: charging after meant the page that
-    // broke the budget had already been paid for and was then thrown away.
+    // Before the read: charging after meant the page that broke the budget was
+    // already paid for and then thrown away.
     spendSlackCall(context?.requestContext);
 
     const result = tid

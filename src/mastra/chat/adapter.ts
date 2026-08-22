@@ -109,15 +109,9 @@ export class SlackAgentAdapter extends SlackAdapter {
     );
   }
 
-  // The adapter resolves the author of every message it parses, and a page is
-  // parsed under Promise.all, so 200 messages from five people fired 200
-  // users.info calls: lookupUser caches, but the write only lands after every
-  // concurrent read has already missed. Collapsing them onto one call per id is
-  // what makes a history read cost a handful of calls instead of one per
-  // message. The gate bounds the ids that are genuinely distinct, and a failed
-  // lookup is remembered because the adapter caches a resolved user but not a
-  // failed one, so without it a rate-limited id is retried on every message
-  // that mentions it.
+  // A page of messages is parsed under Promise.all and every author is looked
+  // up, so without this 200 messages from five people fire 200 users.info
+  // calls: the cache write lands after every concurrent read has missed.
   private readonly userLookups = new Map<
     string,
     ReturnType<SlackAdapter['lookupUser']>
@@ -154,8 +148,8 @@ export class SlackAgentAdapter extends SlackAdapter {
         return user;
       } finally {
         this.userLookups.delete(userId);
-        // Hand the slot to the next waiter rather than freeing it, so a caller
-        // arriving in between cannot take it and push past the cap.
+        // Hand the slot over rather than freeing it, or a caller arriving in
+        // between takes it and pushes past the cap.
         const next = this.waitingLookups.shift();
         if (next) {
           next();
