@@ -30,7 +30,7 @@ export async function scheduledTasksBlocks(
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: '_No scheduled tasks yet. Ask gorkie to set one up in any conversation._',
+        text: '_No scheduled tasks yet. Ask Gorkie to set one up in any conversation._',
       },
     });
     return blocks;

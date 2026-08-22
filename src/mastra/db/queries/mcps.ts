@@ -1,4 +1,5 @@
 import { sql } from 'kysely';
+import { decryptSecret, encryptSecret } from '../../lib/crypto';
 import { rawId } from '../../lib/ids';
 import type { MCPServerConfig } from '../../types';
 import { db } from '../client';
@@ -14,7 +15,7 @@ export async function listMCPServers(
     .execute();
   return rows.map((row) => ({
     name: row.name,
-    token: row.token ?? undefined,
+    token: row.token ? decryptSecret(row.token) : undefined,
     url: row.url,
     lastError: row.last_error ?? undefined,
   }));
@@ -60,20 +61,14 @@ export async function upsertMCPServer({
     if (isNewServer && existing.length >= maxServers) {
       return 'limit-reached';
     }
+    const token = server.token ? encryptSecret(server.token) : null;
     await trx
       .insertInto('mcp_servers')
-      .values({
-        name: server.name,
-        token: server.token ?? null,
-        url: server.url,
-        user_id: id,
-      })
+      .values({ name: server.name, token, url: server.url, user_id: id })
       .onConflict((oc) =>
-        oc.columns(['user_id', 'name']).doUpdateSet({
-          token: server.token ?? null,
-          url: server.url,
-          last_error: null,
-        })
+        oc
+          .columns(['user_id', 'name'])
+          .doUpdateSet({ token, url: server.url, last_error: null })
       )
       .execute();
     return 'ok';

@@ -1,5 +1,5 @@
 diff --git a/dist/agent-DSxJoGjY.js b/dist/agent-DSxJoGjY.js
-index 6c6adc5..203e49d 100644
+index 6c6adc5..a55ae14 100644
 --- a/dist/agent-DSxJoGjY.js
 +++ b/dist/agent-DSxJoGjY.js
 @@ -19664,7 +19664,10 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
@@ -24,7 +24,49 @@ index 6c6adc5..203e49d 100644
  			tracker.reset();
  			continue;
  		}
-@@ -25323,6 +25327,19 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -20839,6 +20843,12 @@ var AgentChannels = class {
+ 						this.log("info", `No pending approval found for toolCallId=${toolCallId}`);
+ 						return;
+ 					}
++					const approvalRequesterId = stashed?.requesterId;
++					const actingUserId = event.user?.userId;
++					if (approvalRequesterId && actingUserId && approvalRequesterId !== actingUserId) {
++						this.log("info", `Ignoring tool approval action from ${actingUserId}: only ${approvalRequesterId} may answer toolCallId=${toolCallId}`);
++						return;
++					}
+ 					const displayName = toolName ? stripToolPrefix(toolName) : "tool";
+ 					const argsSummary = toolArgs ? formatArgsSummary(toolArgs) : "";
+ 					const { resolved: toolDisplay } = this.resolveToolDisplay(platform, adapterConfig?.toolDisplay, false, adapterConfig?.cards, adapterConfig?.formatToolCall);
+@@ -21328,7 +21338,7 @@ var AgentChannels = class {
+ 			actor: message.author
+ 		});
+ 		requestContext.set("channel", channelContext);
+-		const renderContext = this._buildRenderContext(chatThread, platform);
++		const renderContext = this._buildRenderContext(chatThread, platform, void 0, message.author?.userId);
+ 		requestContext.set(CHAT_CHANNEL_RENDER_CONTEXT_KEY, renderContext);
+ 		chatThread.subscribe().catch((err) => {
+ 			this.log("debug", "chatThread.subscribe failed", err);
+@@ -21390,14 +21400,17 @@ var AgentChannels = class {
+ 	*
+ 	* @internal Used by `processChatMessage` and the approve/decline paths.
+ 	*/
+-	_buildRenderContext(chatThread, platform, approvalContext) {
++	_buildRenderContext(chatThread, platform, approvalContext, requesterId) {
+ 		const adapter = this.adapters[platform];
+ 		const adapterConfig = this.adapterConfigs[platform];
+ 		const streaming = this.resolveStreaming(adapterConfig?.streaming);
+ 		const { resolved: toolDisplay, fn: toolDisplayFn } = this.resolveToolDisplay(platform, adapterConfig?.toolDisplay, streaming.enabled, adapterConfig?.cards, adapterConfig?.formatToolCall);
+ 		const typingGate = { active: false };
+ 		const onApprovalPosted = (toolCallId, record) => {
+-			this.pendingApprovalCards.set(toolCallId, record);
++			this.pendingApprovalCards.set(toolCallId, requesterId ? {
++				...record,
++				requesterId
++			} : record);
+ 		};
+ 		const getPendingApproval = (id) => this.pendingApprovalCards.get(id);
+ 		const takePendingApproval = (id) => {
+@@ -25323,6 +25336,19 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  						apiError: void 0,
  						deferredErrorChunk: void 0
  					});
@@ -44,7 +86,7 @@ index 6c6adc5..203e49d 100644
  				}
  			}
  			if (apiErrorRetryResult?.retry && options?.abortSignal?.aborted) {
-@@ -25343,7 +25360,11 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -25343,7 +25369,11 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  				cleanupProviderToolSpans(true);
  				const currentProcessorRetryCount = inputData.processorRetryCount || 0;
  				const steps = inputData.output?.steps || [];
@@ -57,7 +99,7 @@ index 6c6adc5..203e49d 100644
  				const messages = {
  					all: messageList.get.all.aiV5.model(),
  					user: messageList.get.input.aiV5.model(),
-@@ -25371,7 +25392,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -25371,7 +25401,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  					},
  					messages,
  					processorRetryCount: nextProcessorRetryCount,
@@ -67,7 +109,7 @@ index 6c6adc5..203e49d 100644
  			}
  			if (runState.state.deferredErrorChunk && runState.state.hasErrored) {
 diff --git a/dist/agent-NkjbehmN.cjs b/dist/agent-NkjbehmN.cjs
-index be24982..abec1d5 100644
+index be24982..959562d 100644
 --- a/dist/agent-NkjbehmN.cjs
 +++ b/dist/agent-NkjbehmN.cjs
 @@ -19666,7 +19666,10 @@ async function runStreamingDriver({ stream, chatThread, adapter, toolDisplay, to
@@ -92,7 +134,49 @@ index be24982..abec1d5 100644
  			tracker.reset();
  			continue;
  		}
-@@ -25325,6 +25329,19 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -20841,6 +20845,12 @@ var AgentChannels = class {
+ 						this.log("info", `No pending approval found for toolCallId=${toolCallId}`);
+ 						return;
+ 					}
++					const approvalRequesterId = stashed?.requesterId;
++					const actingUserId = event.user?.userId;
++					if (approvalRequesterId && actingUserId && approvalRequesterId !== actingUserId) {
++						this.log("info", `Ignoring tool approval action from ${actingUserId}: only ${approvalRequesterId} may answer toolCallId=${toolCallId}`);
++						return;
++					}
+ 					const displayName = toolName ? stripToolPrefix(toolName) : "tool";
+ 					const argsSummary = toolArgs ? formatArgsSummary(toolArgs) : "";
+ 					const { resolved: toolDisplay } = this.resolveToolDisplay(platform, adapterConfig?.toolDisplay, false, adapterConfig?.cards, adapterConfig?.formatToolCall);
+@@ -21330,7 +21340,7 @@ var AgentChannels = class {
+ 			actor: message.author
+ 		});
+ 		requestContext.set("channel", channelContext);
+-		const renderContext = this._buildRenderContext(chatThread, platform);
++		const renderContext = this._buildRenderContext(chatThread, platform, void 0, message.author?.userId);
+ 		requestContext.set(CHAT_CHANNEL_RENDER_CONTEXT_KEY, renderContext);
+ 		chatThread.subscribe().catch((err) => {
+ 			this.log("debug", "chatThread.subscribe failed", err);
+@@ -21392,14 +21402,17 @@ var AgentChannels = class {
+ 	*
+ 	* @internal Used by `processChatMessage` and the approve/decline paths.
+ 	*/
+-	_buildRenderContext(chatThread, platform, approvalContext) {
++	_buildRenderContext(chatThread, platform, approvalContext, requesterId) {
+ 		const adapter = this.adapters[platform];
+ 		const adapterConfig = this.adapterConfigs[platform];
+ 		const streaming = this.resolveStreaming(adapterConfig?.streaming);
+ 		const { resolved: toolDisplay, fn: toolDisplayFn } = this.resolveToolDisplay(platform, adapterConfig?.toolDisplay, streaming.enabled, adapterConfig?.cards, adapterConfig?.formatToolCall);
+ 		const typingGate = { active: false };
+ 		const onApprovalPosted = (toolCallId, record) => {
+-			this.pendingApprovalCards.set(toolCallId, record);
++			this.pendingApprovalCards.set(toolCallId, requesterId ? {
++				...record,
++				requesterId
++			} : record);
+ 		};
+ 		const getPendingApproval = (id) => this.pendingApprovalCards.get(id);
+ 		const takePendingApproval = (id) => {
+@@ -25325,6 +25338,19 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  						apiError: void 0,
  						deferredErrorChunk: void 0
  					});
@@ -112,7 +196,7 @@ index be24982..abec1d5 100644
  				}
  			}
  			if (apiErrorRetryResult?.retry && options?.abortSignal?.aborted) {
-@@ -25345,7 +25362,11 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -25345,7 +25371,11 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  				cleanupProviderToolSpans(true);
  				const currentProcessorRetryCount = inputData.processorRetryCount || 0;
  				const steps = inputData.output?.steps || [];
@@ -125,7 +209,7 @@ index be24982..abec1d5 100644
  				const messages = {
  					all: messageList.get.all.aiV5.model(),
  					user: messageList.get.input.aiV5.model(),
-@@ -25373,7 +25394,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
+@@ -25373,7 +25403,7 @@ function createLLMExecutionStep({ models, _internal, messageId: messageIdPassed,
  					},
  					messages,
  					processorRetryCount: nextProcessorRetryCount,

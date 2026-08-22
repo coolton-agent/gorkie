@@ -28,7 +28,7 @@ export const content = {
     type: 'home',
     blocks: cardToSlackBlocks(
       Card({
-        title: "I'm gorkie",
+        title: "I'm Gorkie",
         children: [
           Section([
             {

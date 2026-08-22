@@ -4,6 +4,7 @@ import {
   removeMCPServer,
   upsertMCPServer,
 } from '../../db/queries/mcps';
+import { GITHUB_MCP_URL, GITHUB_SERVER_NAME } from '../../lib/github';
 import { findMCPUrlError } from '../../mcp/security';
 import { findMCPConnectionError } from '../../mcp/user-servers';
 import { type MCPServerConfig, mcpServerSchema } from '../../types';
@@ -30,7 +31,7 @@ export function mcpServersBlocks(
         type: 'mrkdwn',
         text: servers.length
           ? 'Tools from these servers are only available on your own turns.'
-          : '_No MCP servers connected. Add one to give gorkie extra tools, just for you._',
+          : '_No MCP servers connected. Add one to give Gorkie extra tools, just for you._',
       },
     },
     ...servers.map((server) => ({
@@ -128,6 +129,17 @@ export function registerMCPServers({
         }
       }
       return { action: 'errors' as const, errors };
+    }
+
+    const isGitHub =
+      new URL(parsed.data.url).host === new URL(GITHUB_MCP_URL).host;
+    if (isGitHub || parsed.data.name.toLowerCase() === GITHUB_SERVER_NAME) {
+      const message =
+        'GitHub has its own section above. Use Sign in with GitHub instead.';
+      return {
+        action: 'errors' as const,
+        errors: isGitHub ? { url: message } : { name: message },
+      };
     }
     const urlError = await findMCPUrlError(parsed.data.url);
     if (urlError) {

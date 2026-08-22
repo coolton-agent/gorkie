@@ -1,10 +1,24 @@
 import { MCPClient } from '@mastra/mcp';
 import { listMCPServers, setMCPServerError } from '../db/queries/mcps';
+import { getGitHubAccount } from '../db/queries/settings';
+import { GITHUB_MCP_URL, GITHUB_SERVER_NAME } from '../lib/github';
 import { logger } from '../lib/logger';
 import type { MCPServerConfig } from '../types';
 import { cleanMCPErrorMessage } from './errors';
 
 const clients = new Map<string, { key: string; promise: Promise<MCPClient> }>();
+
+// Tool ids arrive as `<server>_<tool>`, and the typing status needs the server
+// names to split them back apart. Populated as clients are built.
+export const mcpServerNames = new Set<string>();
+
+function needsApproval({
+  annotations,
+}: {
+  annotations?: { readOnlyHint?: boolean };
+}): boolean {
+  return annotations?.readOnlyHint !== true;
+}
 
 async function buildClient({
   userId,
@@ -44,7 +58,7 @@ async function buildClient({
             server.name,
             {
               url,
-              requireToolApproval: true,
+              requireToolApproval: needsApproval,
               allowedHosts: [url.host],
               ...(server.token
                 ? {
@@ -119,8 +133,8 @@ export async function findMCPConnectionError({
     id: `mcp-probe-${userId}-${server.name}`,
     servers: {
       [server.name]: {
+        connectTimeout: 2000,
         url,
-        connectTimeout: 5000,
         allowedHosts: [url.host],
         ...(server.token
           ? {
@@ -142,7 +156,7 @@ export async function findMCPConnectionError({
         name: server.name,
         userId,
       });
-      return "Couldn't connect to this server. Check the URL and token.";
+      return cleanMCPErrorMessage({ serverName: server.name, raw: error });
     }
   } catch (error) {
     logger.debug('[mcp] connection check failed', {
@@ -150,7 +164,10 @@ export async function findMCPConnectionError({
       name: server.name,
       userId,
     });
-    return "Couldn't connect to this server. Check the URL and token.";
+    return cleanMCPErrorMessage({
+      serverName: server.name,
+      raw: error instanceof Error ? error.message : String(error),
+    });
   } finally {
     await probe.disconnect().catch(() => {
       // best-effort cleanup of the throwaway probe client
@@ -162,13 +179,36 @@ export async function userMCPTools(
   userId: string
 ): Promise<Record<string, unknown>> {
   try {
-    const servers = await listMCPServers(userId);
-    if (servers.length === 0) {
+    const [servers, github] = await Promise.all([
+      listMCPServers(userId),
+      getGitHubAccount(userId),
+    ]);
+    // GitHub is connected from its own App Home section, not added as a row, so
+    // it joins the same client without appearing in the user's server list.
+    const connected = github
+      ? [
+          ...servers,
+          {
+            name: GITHUB_SERVER_NAME,
+            token: github.token,
+            url: GITHUB_MCP_URL,
+          },
+        ]
+      : servers;
+    if (connected.length === 0) {
       await dropClient(userId);
       return {};
     }
-    const client = await resolveClient({ userId, servers });
+    for (const server of connected) {
+      mcpServerNames.add(server.name);
+    }
+    const client = await resolveClient({ userId, servers: connected });
     const { tools, errors } = await client.listToolsWithErrors();
+
+    const githubError = errors[GITHUB_SERVER_NAME];
+    if (githubError) {
+      logger.warn('[mcp] github server failed', { error: githubError, userId });
+    }
 
     await Promise.all(
       servers.map((server) => {

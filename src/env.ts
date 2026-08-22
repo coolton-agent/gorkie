@@ -22,10 +22,12 @@ export const env = createEnv({
 
     E2B_API_KEY: z.string().min(1),
 
+    // 32 bytes, base64: openssl rand -base64 32
+    CREDENTIALS_KEY: z.string().min(1),
+
     EXA_API_KEY: z.string().min(1),
 
     AGENTMAIL_API_KEY: z.string().min(1).optional(),
-    GITHUB_TOKEN: z.string().min(1).optional(),
     EMOJI_PROXY_TOKEN: z.string().min(1).optional(),
   },
   runtimeEnv: process.env,

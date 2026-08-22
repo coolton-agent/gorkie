@@ -27,7 +27,7 @@ export function customInstructionsBlocks(
         type: 'mrkdwn',
         text: preview
           ? `>${preview.replaceAll('\n', '\n>')}`
-          : '_No custom instructions set. gorkie uses its default personality._',
+          : '_No custom instructions set. Gorkie uses its default personality._',
       },
     },
     {
@@ -49,7 +49,7 @@ export function customInstructionsBlocks(
                   title: { type: 'plain_text', text: 'Clear instructions?' },
                   text: {
                     type: 'mrkdwn',
-                    text: 'This removes your custom instructions. gorkie goes back to its default personality for you.',
+                    text: 'This removes your custom instructions. Gorkie goes back to its default personality for you.',
                   },
                   confirm: { type: 'plain_text', text: 'Clear' },
                   deny: { type: 'plain_text', text: 'Cancel' },
@@ -80,7 +80,7 @@ export function registerCustomInstructions({
         children: [
           TextInput({
             id: 'instructions',
-            label: 'How should gorkie act for you?',
+            label: 'How should Gorkie act for you?',
             placeholder:
               'e.g. keep replies short, always show code diffs, address me as vro',
             multiline: true,
