@@ -58,6 +58,25 @@ export function assertCanPostTo({
   }
 }
 
+export function assertCanReactIn({
+  channelId,
+  ctx,
+}: {
+  channelId: string;
+  ctx: ChannelContext;
+}): void {
+  if (!ctx.channelId) {
+    throw new Error(
+      'No current channel to compare against, so gorkie will not react within it.'
+    );
+  }
+  if (chatChannelId(channelId) !== chatChannelId(ctx.channelId)) {
+    throw new Error(
+      'gorkie can only react in the channel this conversation is already in, not a different channel. Ask a member of that channel to react to it there.'
+    );
+  }
+}
+
 export async function joinChannel(channelId: string): Promise<void> {
   try {
     await slack.webClient.conversations.join({
