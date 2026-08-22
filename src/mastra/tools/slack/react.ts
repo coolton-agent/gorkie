@@ -5,6 +5,7 @@ import { channelContext } from '../../lib/context';
 import { rawId } from '../../lib/ids';
 import { parseSlackMessageUrl } from '../../lib/slack-message';
 import { input, output } from '../../types/tools/index';
+import { assertCanReactIn } from './utils';
 
 export const reactTool = createTool({
   id: 'react',
@@ -58,6 +59,8 @@ export const reactTool = createTool({
     if (!target.ts) {
       throw new Error('Pass messageId or url.');
     }
+
+    assertCanReactIn({ channelId: target.channel, ctx });
 
     const emoji = emojiInput.replaceAll(':', '');
     const request = {
