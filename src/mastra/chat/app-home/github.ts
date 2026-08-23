@@ -1,5 +1,7 @@
 import { CardText, Modal } from 'chat';
 import {
+  getGitHubAccount,
+  getGitHubPermission,
   setGitHubAccount,
   setGitHubPermission,
 } from '../../db/queries/settings';
@@ -13,13 +15,89 @@ import {
 } from '../../lib/github';
 import { logger } from '../../lib/logger';
 import type { ToolPermission } from '../../types';
+import { slack } from '../client';
 import { chat } from '../instance';
-import { decodePreset, presetSelect } from './presets';
+import { decodePreset, PRESET_LABELS, presetRadio } from './presets';
+
+// A poll outlives the modal that opened it, so a second sign-in has to cancel
+// the first or the older one can land last and overwrite the newer token.
+const polling = new Map<
+  string,
+  {
+    controller: AbortController;
+    device: DeviceLogin;
+    viewId: string | undefined;
+  }
+>();
+
+function signInModal({
+  device,
+  warning,
+}: {
+  device: DeviceLogin;
+  warning?: string;
+}) {
+  return Modal({
+    callbackId: ids.modal,
+    title: 'Sign in with GitHub',
+    submitLabel: 'Done',
+    closeLabel: 'Cancel',
+    children: [
+      ...(warning ? [CardText(`:warning: ${warning}`)] : []),
+      CardText(
+        `*1.* <${GITHUB_INSTALL_URL}|Choose which repositories Gorkie may use>. Pick "Only select repositories" to keep it narrow.`
+      ),
+      CardText(
+        `*2.* Open <${device.verificationUri}|${device.verificationUri}> and enter this code:`
+      ),
+      CardText(`\`${device.userCode}\``),
+      CardText('GitHub keeps these separate, so do both.'),
+      CardText(
+        'This closes itself once GitHub confirms. Press Done if it does not. The code lasts 15 minutes.'
+      ),
+    ],
+  });
+}
+
+function failedModal(reason: string) {
+  const explained =
+    {
+      expired_token: 'The code ran out before GitHub confirmed.',
+      interrupted: 'Gorkie restarted while waiting, losing track of this code.',
+    }[reason] ?? `GitHub stopped the sign-in: ${reason}.`;
+  return Modal({
+    callbackId: ids.modal,
+    title: 'Not signed in',
+    submitLabel: 'Done',
+    closeLabel: 'Close',
+    children: [
+      CardText(`:warning: ${explained}`),
+      CardText('Press Sign in with GitHub for a new code.'),
+    ],
+  });
+}
+
+function connectedModal(login: string) {
+  return Modal({
+    callbackId: ids.modal,
+    title: 'Signed in',
+    submitLabel: 'Done',
+    closeLabel: 'Close',
+    children: [
+      CardText(`:white_check_mark: Signed in as *${login}*.`),
+      CardText(
+        'The GitHub section shows what Gorkie can reach, and when it stops to ask.'
+      ),
+    ],
+  });
+}
 
 const ids = {
   connect: 'app_home_connect_github',
   disconnect: 'app_home_disconnect_github',
   modal: 'app_home_github_modal',
+  configure: 'app_home_github_configure',
+  configureModal: 'app_home_github_configure_modal',
   permission: 'app_home_github_permission',
   repos: 'app_home_github_repos',
 };
@@ -33,36 +111,28 @@ export function githubBlocks({
   login: string | undefined;
   permission: ToolPermission;
 }): Record<string, unknown>[] {
-  let status =
-    '_Not signed in. Connect your account and Gorkie can read your repos, open issues, and raise pull requests for you._';
+  let status = 'Not connected';
+  let detail =
+    'Sign in to let Gorkie work in your repositories, using your account.';
   if (login && installations > 0) {
-    const count =
-      installations === 1 ? '1 installation' : `${installations} installations`;
-    status = `Signed in as *${login}*, with access to ${count}. Your name goes on anything Gorkie opens.`;
+    status = `*${login}*`;
+    detail = `${PRESET_LABELS[permission]}  ·  Gorkie uses your GitHub account`;
   } else if (login) {
-    status = `Signed in as *${login}*, but Gorkie is not installed on any repositories yet, so it cannot reach your code.`;
+    status = `*${login}*`;
+    detail = 'Not installed on any repositories, so Gorkie cannot reach code';
   }
 
   const connectLabel = login ? 'Reconnect' : 'Sign in with GitHub';
 
   return [
-    { type: 'header', text: { type: 'plain_text', text: 'GitHub' } },
-    { type: 'section', text: { type: 'mrkdwn', text: status } },
-    ...(login
-      ? [
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: 'When Gorkie should stop and ask before acting on your GitHub. Approving is a prompt, not a limit: what it can reach at all comes from the repositories you gave it and from branch protection.',
-            },
-            accessory: presetSelect({
-              actionId: ids.permission,
-              permission,
-            }),
-          },
-        ]
-      : []),
+    {
+      type: 'section',
+      text: { type: 'mrkdwn', text: `*GitHub*\n${status}` },
+    },
+    {
+      type: 'context',
+      elements: [{ type: 'mrkdwn', text: detail }],
+    },
     {
       type: 'actions',
       elements: [
@@ -77,19 +147,24 @@ export function githubBlocks({
         },
         ...(login
           ? [
+              ...(installations === 0
+                ? [
+                    {
+                      type: 'button',
+                      text: {
+                        type: 'plain_text',
+                        text: 'Choose repositories',
+                      },
+                      url: GITHUB_INSTALL_URL,
+                      action_id: ids.repos,
+                      style: 'primary',
+                    },
+                  ]
+                : []),
               {
                 type: 'button',
-                text: {
-                  type: 'plain_text',
-                  text:
-                    installations > 0
-                      ? 'Manage repositories'
-                      : 'Choose repositories',
-                },
-                url:
-                  installations > 0 ? GITHUB_SETTINGS_URL : GITHUB_INSTALL_URL,
-                action_id: ids.repos,
-                ...(installations > 0 ? {} : { style: 'primary' }),
+                text: { type: 'plain_text', text: 'Configure' },
+                action_id: ids.configure,
               },
               {
                 type: 'button',
@@ -100,7 +175,7 @@ export function githubBlocks({
                   title: { type: 'plain_text', text: 'Disconnect GitHub?' },
                   text: {
                     type: 'mrkdwn',
-                    text: "Gorkie forgets your token and stops using GitHub. It stays installed on your repositories until you remove it in GitHub's settings.",
+                    text: "Gorkie forgets your sign-in and stops using GitHub. It stays installed on your repositories until you remove it in GitHub's settings.",
                   },
                   confirm: { type: 'plain_text', text: 'Disconnect' },
                   deny: { type: 'plain_text', text: 'Cancel' },
@@ -120,7 +195,7 @@ async function completeLogin({
 }: {
   login: Awaited<ReturnType<typeof awaitDeviceLogin>>;
   userId: string;
-}): Promise<void> {
+}): Promise<string | undefined> {
   if ('error' in login) {
     logger.info('[github] device login did not complete', {
       reason: login.error,
@@ -140,6 +215,7 @@ async function completeLogin({
     account: { ...login, login: resolved.login },
     userId,
   });
+  return resolved.login;
 }
 
 export function registerGitHub({
@@ -159,57 +235,97 @@ export function registerGitHub({
       return;
     }
 
+    polling.get(userId)?.controller.abort();
+    const controller = new AbortController();
+    const opened = await event.openModal(signInModal({ device }));
+    polling.set(userId, { controller, device, viewId: opened?.viewId });
+
+    awaitDeviceLogin({ ...device, signal: controller.signal })
+      .then(async (login) => {
+        const current = polling.get(userId);
+        if (current?.controller !== controller) {
+          return;
+        }
+        const resolved = await completeLogin({ login, userId });
+        polling.delete(userId);
+        await publishHome(userId);
+        if (!current.viewId) {
+          return;
+        }
+        try {
+          await slack.updateModal(
+            current.viewId,
+            resolved
+              ? connectedModal(resolved)
+              : failedModal('error' in login ? login.error : 'unknown')
+          );
+        } catch (error) {
+          // The modal may already be closed, which is not worth reporting.
+          logger.debug('[github] could not update the sign-in modal', {
+            error,
+            userId,
+          });
+        }
+      })
+      .catch((error: unknown) =>
+        logger.error('[github] device login failed', { error, userId })
+      );
+  });
+
+  bot.onModalSubmit(ids.modal, async (event) => {
+    const { userId } = event.user;
+    const account = await getGitHubAccount(userId);
+    if (account) {
+      polling.get(userId)?.controller.abort();
+      polling.delete(userId);
+      return { action: 'clear' as const };
+    }
+    const pending = polling.get(userId);
+    if (!pending?.device) {
+      return {
+        action: 'update' as const,
+        modal: failedModal('interrupted'),
+      };
+    }
+    return {
+      action: 'update' as const,
+      modal: signInModal({
+        device: pending.device,
+        warning:
+          'GitHub has not confirmed yet. Finish both steps, then press Done again.',
+      }),
+    };
+  });
+
+  bot.onAction(ids.repos, () => Promise.resolve());
+
+  bot.onAction(ids.configure, async (event) => {
+    const permission = await getGitHubPermission(event.user.userId);
     await event.openModal(
       Modal({
-        callbackId: ids.modal,
-        title: 'Sign in with GitHub',
-        // The adapter always renders a submit button, so it is labelled as the
-        // way out rather than left saying "Submit" next to a "Cancel".
-        submitLabel: 'Done',
-        closeLabel: 'Cancel',
+        callbackId: ids.configureModal,
+        title: 'Configure GitHub',
+        submitLabel: 'Save',
         children: [
+          presetRadio({ id: 'permission', permission }),
           CardText(
-            `*1.* <${GITHUB_INSTALL_URL}|Choose which repositories Gorkie may use>. Pick "Only select repositories" to keep it narrow.`
-          ),
-          CardText(
-            `*2.* Open <${device.verificationUri}|${device.verificationUri}> and enter this code:`
-          ),
-          CardText(`\`${device.userCode}\``),
-          CardText(
-            'Step 1 decides what Gorkie can reach, step 2 proves who you are. GitHub keeps them separate, so both are needed.'
-          ),
-          CardText(
-            'This page updates on its own once you approve. The code lasts about 15 minutes.'
+            `Gorkie reaches only the repositories you chose. <${GITHUB_SETTINGS_URL}|Change which ones> on GitHub.`
           ),
         ],
       })
     );
-
-    // Polling runs for minutes, so it cannot be awaited in a Slack handler.
-    awaitDeviceLogin(device)
-      .then((login) => completeLogin({ login, userId }))
-      .catch((error: unknown) =>
-        logger.error('[github] device login failed', { error, userId })
-      )
-      .finally(() => publishHome(userId));
   });
 
-  // Nothing to save; the modal is instructions and the poll does the work.
-  bot.onModalSubmit(ids.modal, () => Promise.resolve());
-
-  // Slack opens the link itself; this exists so the interaction is acknowledged
-  // rather than left unhandled.
-  bot.onAction(ids.repos, () => Promise.resolve());
-
-  bot.onAction(ids.permission, async (event) => {
+  bot.onModalSubmit(ids.configureModal, async (event) => {
     await setGitHubPermission({
-      permission: decodePreset(event.value).permission,
+      permission: decodePreset(event.values.permission).permission,
       userId: event.user.userId,
     });
     await publishHome(event.user.userId);
   });
 
   bot.onAction(ids.disconnect, async (event) => {
+    polling.get(event.user.userId)?.controller.abort();
     await setGitHubAccount({ account: undefined, userId: event.user.userId });
     await publishHome(event.user.userId);
   });

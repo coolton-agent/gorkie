@@ -1,4 +1,5 @@
 import { MCPClient } from '@mastra/mcp';
+import { z } from 'zod';
 import { listMCPServers, setMCPServerError } from '../db/queries/mcps';
 import { getGitHubPermission } from '../db/queries/settings';
 import {
@@ -12,17 +13,15 @@ import { cleanMCPErrorMessage } from './errors';
 
 const clients = new Map<string, { key: string; promise: Promise<MCPClient> }>();
 
-// Tool ids arrive as `<server>_<tool>`, and the typing status needs the server
-// names to split them back apart. Populated as clients are built.
 export const mcpServerNames = new Set<string>();
 
-// What triggers an approval prompt is the person's own setting. A tool we
-// cannot classify counts as a write, never as a read.
-//
-// Deletes are matched by name as well as by annotation: MCP's `destructiveHint`
-// would be the right signal, but GitHub sets it on no tool at all, so the
-// annotation alone would make "only before deleting" never fire.
-const DELETES = /^(delete|remove)_/;
+// Whether a server labels its tools as read-only. Without that label every
+// call counts as a write, so the ask-before-writing setting behaves like
+// ask-for-everything. Filled in as tools are listed, so it is advisory only.
+export const annotationCoverage = new Map<
+  string,
+  { annotated: number; total: number }
+>();
 
 function approvalFor(permission: ToolPermission) {
   return ({
@@ -36,12 +35,28 @@ function approvalFor(permission: ToolPermission) {
       return true;
     }
     const deletes =
-      annotations?.destructiveHint === true || DELETES.test(toolName);
+      annotations?.destructiveHint === true ||
+      toolName.startsWith('delete_') ||
+      toolName.startsWith('remove_');
     if (permission === 'delete') {
       return deletes;
     }
     return deletes || annotations?.readOnlyHint !== true;
   };
+}
+
+const annotatedTool = z.object({
+  mcp: z
+    .object({
+      annotations: z
+        .object({ readOnlyHint: z.boolean().optional() })
+        .optional(),
+    })
+    .optional(),
+});
+
+function readOnlyHintOf(tool: unknown): boolean | undefined {
+  return annotatedTool.safeParse(tool).data?.mcp?.annotations?.readOnlyHint;
 }
 
 async function buildClient({
@@ -125,8 +140,6 @@ function resolveClient({
   userId: string;
   servers: MCPServerConfig[];
 }): Promise<MCPClient> {
-  // Each server's permission is baked into its approval callback, and the
-  // servers are part of the key, so changing one rebuilds the client.
   const key = JSON.stringify(servers);
   const cached = clients.get(userId);
   if (cached && cached.key === key) {
@@ -210,8 +223,6 @@ export async function userMCPTools(
       githubAccessToken(userId),
       getGitHubPermission(userId),
     ]);
-    // GitHub is connected from its own App Home section, not added as a row, so
-    // it joins the same client without appearing in the user's server list.
     const connected = githubToken
       ? [
           ...servers,
@@ -232,6 +243,24 @@ export async function userMCPTools(
     }
     const client = await resolveClient({ servers: connected, userId });
     const { tools, errors } = await client.listToolsWithErrors();
+
+    for (const [id, tool] of Object.entries(tools)) {
+      const server = connected.find((entry) =>
+        id.startsWith(`${entry.name}_`)
+      )?.name;
+      if (!server) {
+        continue;
+      }
+      const counts = annotationCoverage.get(server) ?? {
+        annotated: 0,
+        total: 0,
+      };
+      counts.total += 1;
+      if (readOnlyHintOf(tool) !== undefined) {
+        counts.annotated += 1;
+      }
+      annotationCoverage.set(server, counts);
+    }
 
     const githubError = errors[GITHUB_SERVER_NAME];
     if (githubError) {

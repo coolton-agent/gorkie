@@ -6,12 +6,12 @@ export const content = {
     {
       title: 'Research with sources',
       message:
-        'Research the latest developments in AI agents. Compare at least three reliable sources and give me a concise briefing with links.',
+        'Research what changed recently in AI agents. Compare at least three sources and give me a short briefing with links.',
     },
     {
       title: 'Build a useful file',
       message:
-        'Create a polished weekly planner as an HTML file, verify it in the sandbox, and upload it here.',
+        'Build a weekly planner as an HTML file, check it renders in the sandbox, and upload it here.',
     },
     {
       title: 'Find Slack decisions',
@@ -34,7 +34,7 @@ export const content = {
             {
               type: 'text',
               content:
-                'I can search the web and Slack, write and run code, browse the web, manage scheduled tasks, and work with canvases and files.',
+                'I can search Slack and the web, read pages, write and run code, keep scheduled tasks, and work with canvases and files.',
             },
           ]),
         ],

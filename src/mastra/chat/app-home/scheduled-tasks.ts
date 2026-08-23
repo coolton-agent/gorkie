@@ -78,7 +78,7 @@ export async function scheduledTasksBlocks(
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `_...and ${overflow} more. Cancel a task above to make room to see the rest._`,
+        text: `_…and ${overflow} more. Cancel one above to see the rest._`,
       },
     });
   }

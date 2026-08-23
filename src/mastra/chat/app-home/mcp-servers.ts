@@ -1,80 +1,141 @@
-import { Modal, TextInput } from 'chat';
+import { CardText, Modal, TextInput } from 'chat';
 import {
   listMCPServers,
   removeMCPServer,
   setMCPServerPermission,
   upsertMCPServer,
 } from '../../db/queries/mcps';
-import { GITHUB_MCP_URL, GITHUB_SERVER_NAME } from '../../lib/github';
+import { GITHUB_SERVER_NAME, isGitHubUrl } from '../../lib/github';
 import { findMCPUrlError } from '../../mcp/security';
-import { findMCPConnectionError } from '../../mcp/user-servers';
+import {
+  annotationCoverage,
+  findMCPConnectionError,
+} from '../../mcp/user-servers';
 import { type MCPServerConfig, mcpServerSchema } from '../../types';
 import { chat } from '../instance';
-import { decodePreset, presetSelect } from './presets';
+import { decodePreset, PRESET_LABELS, presetRadio } from './presets';
 
 const ids = {
   add: 'app_home_add_mcp_server',
   modal: 'app_home_mcp_server_modal',
+  configure: 'app_home_mcp_configure',
+  configureModal: 'app_home_mcp_configure_modal',
+  remove: 'app_home_mcp_remove',
   permission: 'app_home_mcp_server_permission',
-  remove: 'app_home_remove_mcp_server',
 };
 const MAX_SERVERS = 10;
+
+function configureModal(server: MCPServerConfig) {
+  const coverage = annotationCoverage.get(server.name);
+  const unlabelled =
+    coverage !== undefined && coverage.total > 0 && coverage.annotated === 0;
+  return Modal({
+    callbackId: ids.configureModal,
+    title: `Configure ${server.name}`.slice(0, 24),
+    submitLabel: 'Save',
+    children: [
+      presetRadio({
+        id: 'permission',
+        permission: server.permission,
+        scope: server.name,
+      }),
+      ...(unlabelled
+        ? [
+            CardText(
+              `:warning: This server does not say which of its ${coverage.total} tools only read, so Gorkie treats them all as writes. Asking before writing will stop on every call here, and asking only before deleting will let real writes through.`
+            ),
+          ]
+        : []),
+    ],
+  });
+}
 
 export function mcpServersBlocks(
   servers: (MCPServerConfig & { lastError?: string })[]
 ): Record<string, unknown>[] {
-  return [
-    {
-      type: 'header',
-      text: { type: 'plain_text', text: 'MCP Servers' },
+  const header = {
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: `*MCP Servers*${servers.length > 0 ? ` (${servers.length})` : ''}`,
     },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: servers.length
-          ? 'Tools from these servers are only available on your own turns.'
-          : '_No MCP servers connected. Add one to give Gorkie extra tools, just for you._',
+    accessory: {
+      type: 'button',
+      text: { type: 'plain_text', text: 'Add' },
+      action_id: ids.add,
+    },
+  };
+
+  if (servers.length === 0) {
+    return [
+      header,
+      {
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: 'None yet. Add one to give Gorkie extra tools, just for you.',
+          },
+        ],
       },
-    },
-    ...servers.flatMap((server) => [
+      { type: 'divider' },
+    ];
+  }
+
+  return [
+    header,
+    ...servers.flatMap((server, index) => [
+      ...(index > 0 ? [{ type: 'divider' }] : []),
       {
         type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: server.lastError
-            ? `*${server.name}*\n${server.url}\n:warning: ${server.lastError}`
-            : `*${server.name}*\n${server.url}`,
-        },
-        accessory: {
-          type: 'button',
-          text: { type: 'plain_text', text: 'Remove' },
-          action_id: ids.remove,
-          value: server.name,
-          style: 'danger',
-        },
+        text: { type: 'mrkdwn', text: `*${server.name}*` },
       },
+      {
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: `${PRESET_LABELS[server.permission]}  ·  \`${server.url}\``,
+          },
+        ],
+      },
+      ...(server.lastError
+        ? [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `*Error*\n\`\`\`${server.lastError}\`\`\``,
+              },
+            },
+          ]
+        : []),
       {
         type: 'actions',
         elements: [
-          presetSelect({
-            actionId: ids.permission,
-            permission: server.permission,
-            scope: server.name,
-          }),
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: 'Configure' },
+            action_id: `${ids.configure} ${server.name}`,
+          },
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: 'Remove' },
+            action_id: `${ids.remove} ${server.name}`,
+            style: 'danger',
+            confirm: {
+              title: { type: 'plain_text', text: 'Remove server?' },
+              text: {
+                type: 'mrkdwn',
+                text: `This removes *${server.name}* and its stored token.`,
+              },
+              confirm: { type: 'plain_text', text: 'Remove' },
+              deny: { type: 'plain_text', text: 'Keep' },
+            },
+          },
         ],
       },
     ]),
-    {
-      type: 'actions',
-      elements: [
-        {
-          type: 'button',
-          text: { type: 'plain_text', text: 'Add server' },
-          action_id: ids.add,
-        },
-      ],
-    },
     { type: 'divider' },
   ];
 }
@@ -120,25 +181,36 @@ export function registerMCPServers({
     );
   });
 
-  bot.onAction(ids.permission, async (event) => {
-    const { permission, scope } = decodePreset(event.value);
-    if (!scope) {
-      return;
-    }
-    await setMCPServerPermission({
-      name: scope,
-      permission,
-      userId: event.user.userId,
-    });
-    await publishHome(event.user.userId);
-  });
-
-  bot.onAction(ids.remove, async (event) => {
-    const name = event.value;
+  bot.onAction(async (event) => {
+    const [action, name] = event.actionId.split(' ');
     if (!name) {
       return;
     }
-    await removeMCPServer({ userId: event.user.userId, name });
+    if (action === ids.remove) {
+      await removeMCPServer({ name, userId: event.user.userId });
+      await publishHome(event.user.userId);
+      return;
+    }
+    if (action !== ids.configure) {
+      return;
+    }
+    const server = (await listMCPServers(event.user.userId)).find(
+      (entry) => entry.name === name
+    );
+    if (server) {
+      await event.openModal(configureModal(server));
+    }
+  });
+
+  bot.onModalSubmit(ids.configureModal, async (event) => {
+    const { permission, scope } = decodePreset(event.values.permission);
+    if (scope) {
+      await setMCPServerPermission({
+        name: scope,
+        permission,
+        userId: event.user.userId,
+      });
+    }
     await publishHome(event.user.userId);
   });
 
@@ -159,8 +231,7 @@ export function registerMCPServers({
       return { action: 'errors' as const, errors };
     }
 
-    const isGitHub =
-      new URL(parsed.data.url).host === new URL(GITHUB_MCP_URL).host;
+    const isGitHub = isGitHubUrl(parsed.data.url);
     if (isGitHub || parsed.data.name.toLowerCase() === GITHUB_SERVER_NAME) {
       const message =
         'GitHub has its own section above. Use Sign in with GitHub instead.';

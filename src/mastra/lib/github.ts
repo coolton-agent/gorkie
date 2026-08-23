@@ -14,11 +14,17 @@ import { logger } from './logger';
 
 export const GITHUB_SERVER_NAME = 'github';
 export const GITHUB_MCP_URL = 'https://api.githubcopilot.com/mcp/';
+export function isGitHubUrl(url: string): boolean {
+  try {
+    return new URL(url).host === new URL(GITHUB_MCP_URL).host;
+  } catch {
+    return false;
+  }
+}
+
 export const GITHUB_SETTINGS_URL = 'https://github.com/settings/installations';
 export const GITHUB_INSTALL_URL = `https://github.com/apps/${env.GITHUB_APP_SLUG}/installations/new`;
 
-// Refresh with room to spare: a token that expires mid-run would fail the call
-// it was fetched for.
 const REFRESH_MARGIN_MS = 5 * 60 * 1000;
 
 export interface DeviceLogin {
@@ -43,9 +49,8 @@ export async function startDeviceLogin(): Promise<DeviceLogin> {
   };
 }
 
-// The library turns GitHub's in-band `{ error }` body into a thrown
-// RequestError, so the pending and back-off signals arrive as failures rather
-// than as results.
+// The library throws on GitHub's in-band `{ error }` body, so the pending and
+// back-off signals arrive as failures rather than as results.
 const oauthErrorSchema = z.object({
   response: z.object({ data: z.object({ error: z.string() }) }),
 });
@@ -135,9 +140,8 @@ export async function githubAccessToken(
     });
     return refreshed.token;
   } catch (error) {
-    // A refresh token is single use and expires after six months, so a failure
-    // here means they have to sign in again rather than that the call is worth
-    // retrying.
+    // Refresh tokens are single use, so a failure here means signing in again
+    // rather than retrying.
     logger.warn('[github] token refresh failed', { error, userId });
     await setGitHubAccount({ account: undefined, userId });
   }
@@ -157,9 +161,6 @@ export async function resolveGitHubLogin(
     : { error: "GitHub didn't return an account for that token." };
 }
 
-// Authorising and installing are separate on GitHub's side, and the device flow
-// only does the first. Someone who has authorised but installed nothing holds a
-// working token that reaches no repository at all, which reads as broken.
 export async function countInstallations(token: string): Promise<number> {
   const body = await githubApi({ path: '/user/installations', token });
   if ('error' in body) {
