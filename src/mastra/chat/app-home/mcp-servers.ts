@@ -2,6 +2,7 @@ import { Modal, TextInput } from 'chat';
 import {
   listMCPServers,
   removeMCPServer,
+  setMCPServerPermission,
   upsertMCPServer,
 } from '../../db/queries/mcps';
 import { GITHUB_MCP_URL, GITHUB_SERVER_NAME } from '../../lib/github';
@@ -9,10 +10,12 @@ import { findMCPUrlError } from '../../mcp/security';
 import { findMCPConnectionError } from '../../mcp/user-servers';
 import { type MCPServerConfig, mcpServerSchema } from '../../types';
 import { chat } from '../instance';
+import { decodePreset, presetSelect } from './presets';
 
 const ids = {
   add: 'app_home_add_mcp_server',
   modal: 'app_home_mcp_server_modal',
+  permission: 'app_home_mcp_server_permission',
   remove: 'app_home_remove_mcp_server',
 };
 const MAX_SERVERS = 10;
@@ -34,22 +37,34 @@ export function mcpServersBlocks(
           : '_No MCP servers connected. Add one to give Gorkie extra tools, just for you._',
       },
     },
-    ...servers.map((server) => ({
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: server.lastError
-          ? `*${server.name}*\n${server.url}\n:warning: ${server.lastError}`
-          : `*${server.name}*\n${server.url}`,
+    ...servers.flatMap((server) => [
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: server.lastError
+            ? `*${server.name}*\n${server.url}\n:warning: ${server.lastError}`
+            : `*${server.name}*\n${server.url}`,
+        },
+        accessory: {
+          type: 'button',
+          text: { type: 'plain_text', text: 'Remove' },
+          action_id: ids.remove,
+          value: server.name,
+          style: 'danger',
+        },
       },
-      accessory: {
-        type: 'button',
-        text: { type: 'plain_text', text: 'Remove' },
-        action_id: ids.remove,
-        value: server.name,
-        style: 'danger',
+      {
+        type: 'actions',
+        elements: [
+          presetSelect({
+            actionId: ids.permission,
+            permission: server.permission,
+            scope: server.name,
+          }),
+        ],
       },
-    })),
+    ]),
     {
       type: 'actions',
       elements: [
@@ -103,6 +118,19 @@ export function registerMCPServers({
         ],
       })
     );
+  });
+
+  bot.onAction(ids.permission, async (event) => {
+    const { permission, scope } = decodePreset(event.value);
+    if (!scope) {
+      return;
+    }
+    await setMCPServerPermission({
+      name: scope,
+      permission,
+      userId: event.user.userId,
+    });
+    await publishHome(event.user.userId);
   });
 
   bot.onAction(ids.remove, async (event) => {

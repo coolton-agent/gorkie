@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+export const TOOL_PERMISSIONS = ['all', 'write', 'delete'] as const;
+
+export type ToolPermission = (typeof TOOL_PERMISSIONS)[number];
+
+export const toolPermissionSchema = z.enum(TOOL_PERMISSIONS).catch('write');
+
 export const mcpServerSchema = z.object({
   name: z
     .string()
@@ -11,6 +17,7 @@ export const mcpServerSchema = z.object({
     ),
   url: z.url(),
   token: z.string().min(1).max(2000).optional(),
+  permission: toolPermissionSchema.default('write'),
 });
 
 export type MCPServerConfig = z.infer<typeof mcpServerSchema>;

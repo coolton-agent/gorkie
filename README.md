@@ -115,6 +115,9 @@ local database named `gorkie`. Mastra auto-creates its tables on first run.
 | `DATABASE_URL` | yes | Postgres connection string |
 | `E2B_API_KEY` | yes | E2B sandbox key (`e2b_…`) |
 | `CREDENTIALS_KEY` | yes | Encrypts connected GitHub and MCP tokens at rest (`openssl rand -base64 32`) |
+| `GITHUB_APP_SLUG` | yes | The app's URL slug, used to link people to the install page |
+| `GITHUB_APP_CLIENT_ID` | yes | GitHub App client id, for the App Home sign-in (see [docs/github-app.md](./docs/github-app.md)) |
+| `GITHUB_APP_CLIENT_SECRET` | yes | GitHub App client secret, used to refresh expiring user tokens |
 | `EXA_API_KEY` | yes | Exa key, powers `search_web`/`fetch_url` |
 | `AGENTMAIL_API_KEY` | no | Broker AgentMail API access into sandbox egress for `gorkie@agentmail.to` |
 

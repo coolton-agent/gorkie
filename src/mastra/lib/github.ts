@@ -1,19 +1,186 @@
+import {
+  createDeviceCode,
+  exchangeDeviceCode,
+  refreshToken,
+} from '@octokit/oauth-methods';
+import { z } from 'zod';
+import { env } from '@/env';
+import {
+  type GitHubAccount,
+  getGitHubAccount,
+  setGitHubAccount,
+} from '../db/queries/settings';
+import { logger } from './logger';
+
 export const GITHUB_SERVER_NAME = 'github';
 export const GITHUB_MCP_URL = 'https://api.githubcopilot.com/mcp/';
+export const GITHUB_SETTINGS_URL = 'https://github.com/settings/installations';
+export const GITHUB_INSTALL_URL = `https://github.com/apps/${env.GITHUB_APP_SLUG}/installations/new`;
 
-// The GitHub MCP server advertises classic OAuth scopes, and three of them
-// (gist, notifications, codespace) have no fine-grained equivalent at all.
-// Classic tokens also accept these as query params, so the scope boxes arrive
-// pre-ticked instead of being hunted down by hand.
-export const GITHUB_TOKEN_URL =
-  'https://github.com/settings/tokens/new?description=Gorkie&scopes=repo,read:org,read:user';
+// Refresh with room to spare: a token that expires mid-run would fail the call
+// it was fetched for.
+const REFRESH_MARGIN_MS = 5 * 60 * 1000;
+
+export interface DeviceLogin {
+  deviceCode: string;
+  expiresIn: number;
+  interval: number;
+  userCode: string;
+  verificationUri: string;
+}
+
+export async function startDeviceLogin(): Promise<DeviceLogin> {
+  const { data } = await createDeviceCode({
+    clientId: env.GITHUB_APP_CLIENT_ID,
+    clientType: 'github-app',
+  });
+  return {
+    deviceCode: data.device_code,
+    expiresIn: data.expires_in,
+    interval: data.interval,
+    userCode: data.user_code,
+    verificationUri: data.verification_uri,
+  };
+}
+
+// The library turns GitHub's in-band `{ error }` body into a thrown
+// RequestError, so the pending and back-off signals arrive as failures rather
+// than as results.
+const oauthErrorSchema = z.object({
+  response: z.object({ data: z.object({ error: z.string() }) }),
+});
+
+function oauthError(error: unknown): string | undefined {
+  return oauthErrorSchema.safeParse(error).data?.response.data.error;
+}
+
+function toAccount(authentication: {
+  expiresAt?: string;
+  refreshToken?: string;
+  token: string;
+}): Omit<GitHubAccount, 'login'> {
+  return {
+    expiresAt: authentication.expiresAt
+      ? new Date(authentication.expiresAt)
+      : undefined,
+    refreshToken: authentication.refreshToken,
+    token: authentication.token,
+  };
+}
+
+export async function awaitDeviceLogin({
+  deviceCode,
+  expiresIn,
+  interval,
+  signal,
+}: DeviceLogin & { signal?: AbortSignal }): Promise<
+  Omit<GitHubAccount, 'login'> | { error: string }
+> {
+  const deadline = Date.now() + expiresIn * 1000;
+  let waitMs = interval * 1000;
+
+  while (Date.now() < deadline) {
+    if (signal?.aborted) {
+      return { error: 'cancelled' };
+    }
+    // biome-ignore lint/performance/noAwaitInLoops: polling is the protocol
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+    try {
+      const { authentication } = await exchangeDeviceCode({
+        clientId: env.GITHUB_APP_CLIENT_ID,
+        clientType: 'github-app',
+        code: deviceCode,
+      });
+      return toAccount(authentication);
+    } catch (error) {
+      const code = oauthError(error);
+      if (code === 'authorization_pending') {
+        continue;
+      }
+      if (code === 'slow_down') {
+        waitMs += 5000;
+        continue;
+      }
+      return { error: code ?? 'unknown' };
+    }
+  }
+  return { error: 'expired_token' };
+}
+
+export async function githubAccessToken(
+  userId: string
+): Promise<string | undefined> {
+  const account = await getGitHubAccount(userId);
+  if (!account) {
+    return;
+  }
+  const expiresSoon =
+    account.expiresAt !== undefined &&
+    account.expiresAt.getTime() - Date.now() < REFRESH_MARGIN_MS;
+  if (!(expiresSoon && account.refreshToken)) {
+    return account.token;
+  }
+
+  try {
+    const { authentication } = await refreshToken({
+      clientId: env.GITHUB_APP_CLIENT_ID,
+      clientSecret: env.GITHUB_APP_CLIENT_SECRET,
+      clientType: 'github-app',
+      refreshToken: account.refreshToken,
+    });
+    const refreshed = toAccount(authentication);
+    await setGitHubAccount({
+      account: { ...refreshed, login: account.login },
+      userId,
+    });
+    return refreshed.token;
+  } catch (error) {
+    // A refresh token is single use and expires after six months, so a failure
+    // here means they have to sign in again rather than that the call is worth
+    // retrying.
+    logger.warn('[github] token refresh failed', { error, userId });
+    await setGitHubAccount({ account: undefined, userId });
+  }
+}
 
 export async function resolveGitHubLogin(
   token: string
 ): Promise<{ login: string } | { error: string }> {
+  const body = await githubApi({ path: '/user', token });
+  if ('error' in body) {
+    return body;
+  }
+  const login = z.object({ login: z.string().min(1) }).safeParse(body.data)
+    .data?.login;
+  return login
+    ? { login }
+    : { error: "GitHub didn't return an account for that token." };
+}
+
+// Authorising and installing are separate on GitHub's side, and the device flow
+// only does the first. Someone who has authorised but installed nothing holds a
+// working token that reaches no repository at all, which reads as broken.
+export async function countInstallations(token: string): Promise<number> {
+  const body = await githubApi({ path: '/user/installations', token });
+  if ('error' in body) {
+    return 0;
+  }
+  return (
+    z.object({ total_count: z.number() }).safeParse(body.data).data
+      ?.total_count ?? 0
+  );
+}
+
+async function githubApi({
+  path,
+  token,
+}: {
+  path: string;
+  token: string;
+}): Promise<{ data: unknown } | { error: string }> {
   let response: Response;
   try {
-    response = await fetch('https://api.github.com/user', {
+    response = await fetch(`https://api.github.com${path}`, {
       headers: {
         Accept: 'application/vnd.github+json',
         Authorization: `Bearer ${token}`,
@@ -22,44 +189,10 @@ export async function resolveGitHubLogin(
       signal: AbortSignal.timeout(10_000),
     });
   } catch {
-    return { error: "Couldn't reach GitHub. Try again in a moment." };
-  }
-
-  if (response.status === 401) {
-    return {
-      error:
-        'GitHub rejected that token. Check you copied all of it, and that it has not expired.',
-    };
+    return { error: "Couldn't reach GitHub." };
   }
   if (!response.ok) {
-    return { error: `GitHub returned ${response.status}. Try again.` };
+    return { error: `GitHub returned ${response.status}.` };
   }
-
-  const body: unknown = await response.json().catch(() => null);
-  const login =
-    body && typeof body === 'object' && 'login' in body
-      ? (body as { login: unknown }).login
-      : undefined;
-  if (typeof login !== 'string' || login.length === 0) {
-    return { error: "GitHub didn't return an account for that token." };
-  }
-
-  // A fine-grained token reaches /user but is missing scopes the MCP server
-  // needs, so it would connect and then 403 on the first write. Catch it here.
-  const scopes = response.headers.get('x-oauth-scopes');
-  if (scopes === null) {
-    return {
-      error:
-        'That looks like a fine-grained token. Gorkie needs a classic token, which the link above creates with the right scopes already ticked.',
-    };
-  }
-  const granted = new Set(scopes.split(',').map((scope) => scope.trim()));
-  if (!granted.has('repo')) {
-    return {
-      error:
-        'That token is missing the repo scope, so Gorkie could read but not open branches or pull requests. Regenerate it using the link above.',
-    };
-  }
-
-  return { login };
+  return { data: await response.json().catch(() => null) };
 }

@@ -29,6 +29,7 @@
     "@mastra/memory": "^1.27.0",
     "@mastra/observability": "1.17.1",
     "@mastra/pg": "1.21.0",
+    "@octokit/oauth-methods": "^6.0.4",
     "@openrouter/ai-sdk-provider": "^3.0.0",
     "@t3-oss/env-core": "^0.13.11",
     "ai": "^7.0.66",

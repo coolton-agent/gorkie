@@ -25,6 +25,11 @@ export const env = createEnv({
     // 32 bytes, base64: openssl rand -base64 32
     CREDENTIALS_KEY: z.string().min(1),
 
+    // The app's URL slug, from https://github.com/apps/<slug>
+    GITHUB_APP_SLUG: z.string().min(1),
+    GITHUB_APP_CLIENT_ID: z.string().min(1),
+    GITHUB_APP_CLIENT_SECRET: z.string().min(1),
+
     EXA_API_KEY: z.string().min(1),
 
     AGENTMAIL_API_KEY: z.string().min(1).optional(),

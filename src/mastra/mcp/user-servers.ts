@@ -1,9 +1,13 @@
 import { MCPClient } from '@mastra/mcp';
 import { listMCPServers, setMCPServerError } from '../db/queries/mcps';
-import { getGitHubAccount } from '../db/queries/settings';
-import { GITHUB_MCP_URL, GITHUB_SERVER_NAME } from '../lib/github';
+import { getGitHubPermission } from '../db/queries/settings';
+import {
+  GITHUB_MCP_URL,
+  GITHUB_SERVER_NAME,
+  githubAccessToken,
+} from '../lib/github';
 import { logger } from '../lib/logger';
-import type { MCPServerConfig } from '../types';
+import type { MCPServerConfig, ToolPermission } from '../types';
 import { cleanMCPErrorMessage } from './errors';
 
 const clients = new Map<string, { key: string; promise: Promise<MCPClient> }>();
@@ -12,12 +16,32 @@ const clients = new Map<string, { key: string; promise: Promise<MCPClient> }>();
 // names to split them back apart. Populated as clients are built.
 export const mcpServerNames = new Set<string>();
 
-function needsApproval({
-  annotations,
-}: {
-  annotations?: { readOnlyHint?: boolean };
-}): boolean {
-  return annotations?.readOnlyHint !== true;
+// What triggers an approval prompt is the person's own setting. A tool we
+// cannot classify counts as a write, never as a read.
+//
+// Deletes are matched by name as well as by annotation: MCP's `destructiveHint`
+// would be the right signal, but GitHub sets it on no tool at all, so the
+// annotation alone would make "only before deleting" never fire.
+const DELETES = /^(delete|remove)_/;
+
+function approvalFor(permission: ToolPermission) {
+  return ({
+    annotations,
+    toolName,
+  }: {
+    annotations?: { destructiveHint?: boolean; readOnlyHint?: boolean };
+    toolName: string;
+  }): boolean => {
+    if (permission === 'all') {
+      return true;
+    }
+    const deletes =
+      annotations?.destructiveHint === true || DELETES.test(toolName);
+    if (permission === 'delete') {
+      return deletes;
+    }
+    return deletes || annotations?.readOnlyHint !== true;
+  };
 }
 
 async function buildClient({
@@ -58,7 +82,7 @@ async function buildClient({
             server.name,
             {
               url,
-              requireToolApproval: needsApproval,
+              requireToolApproval: approvalFor(server.permission),
               allowedHosts: [url.host],
               ...(server.token
                 ? {
@@ -101,12 +125,14 @@ function resolveClient({
   userId: string;
   servers: MCPServerConfig[];
 }): Promise<MCPClient> {
+  // Each server's permission is baked into its approval callback, and the
+  // servers are part of the key, so changing one rebuilds the client.
   const key = JSON.stringify(servers);
   const cached = clients.get(userId);
   if (cached && cached.key === key) {
     return cached.promise;
   }
-  const promise = buildClient({ userId, servers, stale: cached?.promise });
+  const promise = buildClient({ servers, stale: cached?.promise, userId });
   const entry = { key, promise };
   clients.set(userId, entry);
 
@@ -179,18 +205,20 @@ export async function userMCPTools(
   userId: string
 ): Promise<Record<string, unknown>> {
   try {
-    const [servers, github] = await Promise.all([
+    const [servers, githubToken, githubPermission] = await Promise.all([
       listMCPServers(userId),
-      getGitHubAccount(userId),
+      githubAccessToken(userId),
+      getGitHubPermission(userId),
     ]);
     // GitHub is connected from its own App Home section, not added as a row, so
     // it joins the same client without appearing in the user's server list.
-    const connected = github
+    const connected = githubToken
       ? [
           ...servers,
           {
             name: GITHUB_SERVER_NAME,
-            token: github.token,
+            permission: githubPermission,
+            token: githubToken,
             url: GITHUB_MCP_URL,
           },
         ]
@@ -202,7 +230,7 @@ export async function userMCPTools(
     for (const server of connected) {
       mcpServerNames.add(server.name);
     }
-    const client = await resolveClient({ userId, servers: connected });
+    const client = await resolveClient({ servers: connected, userId });
     const { tools, errors } = await client.listToolsWithErrors();
 
     const githubError = errors[GITHUB_SERVER_NAME];
