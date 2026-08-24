@@ -39,13 +39,26 @@ export async function githubTools({
     });
 
     const tools: Record<string, unknown> = Object.fromEntries(
-      Object.entries(POLICIES).map(([name, policy]) => [
-        toolName(name),
-        {
-          ...built[name as keyof typeof built],
-          needsApproval: policy(permission),
-        },
-      ])
+      Object.entries(POLICIES).map(([name, policy]) => {
+        const tool = built[name as keyof typeof built];
+        return [
+          toolName(name),
+          {
+            ...tool,
+            needsApproval: policy(permission),
+            toModelOutput: tool.toModelOutput
+              ? (result: unknown) =>
+                  result === undefined
+                    ? result
+                    : tool.toModelOutput?.({
+                        input: undefined,
+                        output: result,
+                        toolCallId: '',
+                      })
+              : undefined,
+          },
+        ];
+      })
     );
 
     if (threadId) {

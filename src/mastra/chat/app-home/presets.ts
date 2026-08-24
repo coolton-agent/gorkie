@@ -22,8 +22,27 @@ const PRESETS = {
   { description: string; label: string; status: string }
 >;
 
-export function presetStatus(permission: ToolPermission): string {
-  return PRESETS[permission].status;
+// GitHub's curated surface has nothing destructive left, so `delete` gates
+// nothing there and saying "asks before deleting" would promise a safety net
+// that does not exist. MCP servers keep the original wording, where the
+// `delete_`/`remove_` name check does gate something.
+const NEVER_ASK = {
+  description: 'Nothing waits, including writes.',
+  label: 'Never ask',
+  status: '`never asks`',
+};
+
+function preset(permission: ToolPermission, nothingDeletes: boolean) {
+  return permission === 'delete' && nothingDeletes
+    ? NEVER_ASK
+    : PRESETS[permission];
+}
+
+export function presetStatus(
+  permission: ToolPermission,
+  nothingDeletes = false
+): string {
+  return preset(permission, nothingDeletes).status;
 }
 
 export function decodePreset(value: string | undefined): {
@@ -38,10 +57,12 @@ export function decodePreset(value: string | undefined): {
 
 export function presetRadio({
   id,
+  nothingDeletes = false,
   permission,
   scope,
 }: {
   id: string;
+  nothingDeletes?: boolean;
   permission: ToolPermission;
   scope?: string;
 }) {
@@ -49,10 +70,13 @@ export function presetRadio({
     id,
     label: 'When should Gorkie stop and ask?',
     initialOption: scope ? `${scope} ${permission}` : permission,
-    options: Object.entries(PRESETS).map(([value, preset]) => ({
-      label: preset.label,
-      description: preset.description,
-      value: scope ? `${scope} ${value}` : value,
-    })),
+    options: Object.keys(PRESETS).map((value) => {
+      const entry = preset(value as ToolPermission, nothingDeletes);
+      return {
+        label: entry.label,
+        description: entry.description,
+        value: scope ? `${scope} ${value}` : value,
+      };
+    }),
   });
 }

@@ -11,6 +11,26 @@ import { assertCanPostTo, joinChannel } from './utils';
 
 const markdownConverter = new SlackFormatConverter();
 
+// The adapter's `userName` is a generic default and the bot's handle is an
+// internal slug, so neither is what people call it. The profile display name is.
+let cachedBotName: string | undefined;
+
+async function botDisplayName(botUserId: string | undefined): Promise<string> {
+  if (cachedBotName) {
+    return cachedBotName;
+  }
+  if (!botUserId) {
+    return 'gorkie';
+  }
+  const info = await slack.webClient.users
+    .info({ user: botUserId })
+    .catch(() => null);
+  const profile = info?.user?.profile;
+  cachedBotName =
+    profile?.display_name || profile?.real_name || info?.user?.name || 'gorkie';
+  return cachedBotName;
+}
+
 async function resolveChannelAndThread(resolved: {
   type: 'thread' | 'channel' | 'user';
   id: string;
@@ -34,7 +54,7 @@ Never use this to answer the current conversation. Your normal assistant respons
 
 Channel and thread targets must be in the channel this conversation is already in; user targets must be the requester themselves. No exceptions to either, even if asked directly.
 
-Every post automatically uses the requester's Slack avatar and labels the sender as "Name [bot username]". Do not add that attribution yourself in the message text; there is no way to override or customize it.
+Every post automatically uses the requester's Slack avatar and labels the sender as "Name [gorkie]". Do not add that attribution yourself in the message text; there is no way to override or customize it.
 
 Errors: channel_not_found usually means the bot isn't a member of that private channel; not_in_channel means it hasn't joined yet. Either way, tell the user to invite the bot there.`,
   inputSchema: input({
@@ -68,12 +88,11 @@ Errors: channel_not_found usually means the bot isn't a member of that private c
             .catch(() => null)
         : null;
       const requester = requesterUser?.userName ?? ctx.userName;
+      const bot = await botDisplayName(ctx.botUserId);
       // A user target is always the requester DMing themselves (see
       // assertCanPostTo), so crediting them by name is redundant there.
       const username =
-        requester && target.type !== 'user'
-          ? `${requester} [${ctx.botUserName ?? 'gorkie'}]`
-          : (ctx.botUserName ?? 'gorkie');
+        requester && target.type !== 'user' ? `${requester} [${bot}]` : bot;
       const sent = await slack.webClient.chat.postMessage({
         channel,
         ...(threadTs ? { thread_ts: threadTs } : {}),

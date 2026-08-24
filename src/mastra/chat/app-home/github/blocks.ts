@@ -21,10 +21,10 @@ export function githubBlocks({
     'Sign in with the app for access scoped to the repositories you pick. A classic token also reaches repositories somebody else owns.';
   if (credential?.kind === 'pat') {
     status = `*${credential.login}*`;
-    detail = `${presetStatus(permission)}  ·  using your personal token`;
+    detail = `${presetStatus(permission, true)}  ·  using your personal token`;
   } else if (credential && installations > 0) {
     status = `*${credential.login}*`;
-    detail = `${presetStatus(permission)}  ·  Gorkie uses your GitHub account`;
+    detail = `${presetStatus(permission, true)}  ·  Gorkie uses your GitHub account`;
   } else if (credential) {
     status = `*${credential.login}*`;
     detail = `Not installed on any repositories, so Gorkie cannot reach code  ·  <${GITHUB_INSTALL_URL}|choose repositories>`;

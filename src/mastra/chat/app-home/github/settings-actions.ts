@@ -33,7 +33,7 @@ export function registerSettings({
         title: 'Configure GitHub',
         submitLabel: 'Save',
         children: [
-          presetRadio({ id: 'permission', permission }),
+          presetRadio({ id: 'permission', nothingDeletes: true, permission }),
           CardText(
             pat
               ? 'Your token reaches everything its scopes allow, not a list of repositories. Disconnect to go back to the app.'
