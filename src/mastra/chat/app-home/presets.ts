@@ -36,43 +36,6 @@ export function decodePreset(value: string | undefined): {
     : { permission: toolPermissionSchema.parse(tail), scope: head };
 }
 
-function options(scope?: string) {
-  return PRESETS.map((preset) => ({
-    text: { type: 'plain_text', text: preset.label },
-    description: { type: 'plain_text', text: preset.description },
-    value: scope ? `${scope} ${preset.value}` : preset.value,
-  }));
-}
-
-function initial({
-  permission,
-  scope,
-}: {
-  permission: ToolPermission;
-  scope?: string;
-}) {
-  return options(scope).find((option) => option.value.endsWith(permission));
-}
-
-export function presetSelect({
-  actionId,
-  permission,
-  scope,
-}: {
-  actionId: string;
-  permission: ToolPermission;
-  scope?: string;
-}): Record<string, unknown> {
-  const selected = initial({ permission, scope });
-  return {
-    type: 'static_select',
-    action_id: actionId,
-    placeholder: { type: 'plain_text', text: 'When to ask' },
-    options: options(scope),
-    ...(selected ? { initial_option: selected } : {}),
-  };
-}
-
 export function presetRadio({
   id,
   permission,

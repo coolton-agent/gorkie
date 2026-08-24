@@ -4,8 +4,11 @@ import {
   TokenLimiterProcessor,
   ToolSearchProcessor,
 } from '@mastra/core/processors';
+import { RequestContext } from '@mastra/core/request-context';
 import { Memory } from '@mastra/memory';
+import { z } from 'zod';
 import { slack } from '../chat/client';
+import { beginFocus } from '../chat/focus';
 import {
   onDirectMessage,
   onMention,
@@ -17,11 +20,13 @@ import { listMCPServers } from '../db/queries/mcps';
 import { getInstructions } from '../db/queries/settings';
 import { channelContext } from '../lib/context';
 import { defaultErrorProcessors } from '../lib/error-handling';
+import { exitFocus } from '../lib/focus';
 import { logger } from '../lib/logger';
 import { stepCountIs, toolCall } from '../lib/tools';
 import { userMCPTools } from '../mcp/user-servers';
 import { clearStatus } from '../processors/clear-status';
 import { delegatedTools } from '../processors/delegated-tools';
+import { releaseFocus } from '../processors/focus';
 import { sandbox } from '../processors/sandbox';
 import { turnFooter } from '../processors/turn-footer';
 import { workingModel } from '../processors/working-model';
@@ -31,10 +36,25 @@ import {
   summarizer as summarizerModel,
 } from '../providers';
 import { workspaceCodeModePrompt } from '../tools/code-mode/slack';
+import { githubTools } from '../tools/github';
 import { deferredTools, orchestratorTools } from '../tools/toolsets';
 import { workspace } from '../workspace';
 import { exploreAgent } from './explore';
 import { researchAgent } from './research';
+
+// The tool hook types its context as unknown, and only some GitHub tools name a
+// repository, so both are validated rather than asserted.
+const hookContext = z.looseObject({
+  requestContext: z.instanceof(RequestContext).optional(),
+});
+const repositoryOf = z.looseObject({ repository: z.string().optional() });
+
+function releaseFocusFor(requestContext: RequestContext | undefined): void {
+  const { threadId } = channelContext(requestContext);
+  if (threadId) {
+    exitFocus(threadId);
+  }
+}
 
 const orchestrator = new Agent({
   id: config.id,
@@ -82,7 +102,7 @@ const orchestrator = new Agent({
   model: orchestratorModel,
   errorProcessors: defaultErrorProcessors(),
   maxProcessorRetries: 2,
-  defaultOptions: {
+  defaultOptions: ({ requestContext }) => ({
     modelSettings: {
       maxOutputTokens: config.maxTokens.output,
       maxRetries: 5,
@@ -95,7 +115,12 @@ const orchestrator = new Agent({
     },
     stopWhen: [toolCall('wait'), stepCountIs(config.maxSteps)],
     autoResumeSuspendedTools: true,
-  },
+    // Output processors only run when a turn completes normally, so a thrown
+    // or cancelled turn would otherwise hold its thread shut until the ceiling
+    // in config.focus expired.
+    onError: () => releaseFocusFor(requestContext),
+    onAbort: () => releaseFocusFor(requestContext),
+  }),
   workspace,
   inputProcessors: [
     new ToolSearchProcessor({
@@ -116,13 +141,42 @@ const orchestrator = new Agent({
     delegatedTools,
     sandbox,
     clearStatus,
+    releaseFocus,
     turnFooter,
     workingModel(config.id),
   ],
+  // A turn acting on someone's GitHub account should not be steerable by
+  // anyone else, whatever it is doing with it, so the first GitHub call of a
+  // turn seals the thread rather than only the push doing so.
+  hooks: {
+    beforeToolCall: async ({ toolName, input, context }) => {
+      if (!toolName.startsWith('github_')) {
+        return;
+      }
+      const { threadId, userId } = channelContext(
+        hookContext.safeParse(context).data?.requestContext
+      );
+      if (!(threadId && userId)) {
+        return;
+      }
+      const repository = repositoryOf.safeParse(input).data?.repository;
+      await beginFocus({
+        reason: repository ? `working in ${repository}` : 'working in GitHub',
+        threadId,
+        userId,
+      });
+    },
+  },
   tools: async ({ requestContext }) => {
-    const { userId } = channelContext(requestContext);
-    const userTools = userId ? await userMCPTools(userId) : {};
-    return { ...orchestratorTools, ...userTools };
+    const { userId, threadId } = channelContext(requestContext);
+    if (!userId) {
+      return orchestratorTools;
+    }
+    const [userTools, github] = await Promise.all([
+      userMCPTools(userId),
+      githubTools({ threadId, userId }),
+    ]);
+    return { ...orchestratorTools, ...github, ...userTools };
   },
   agents: {
     research: researchAgent,

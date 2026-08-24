@@ -1,6 +1,7 @@
 import type { Message, Thread } from 'chat';
 import { z } from 'zod';
 import { isUserAllowed } from '../lib/allowed-users';
+import { focusHolder } from '../lib/focus';
 import { logger } from '../lib/logger';
 import { attachments } from './attachments';
 import { slack } from './client';
@@ -46,6 +47,43 @@ function isComment(message: Message): boolean {
   return false;
 }
 
+// Refusing here, before defaultHandler, is what keeps a credentialed turn
+// sealed: the message never reaches Mastra, so it cannot join the active run as
+// an interjection. Queuing it instead would replay a stale steer after the work
+// it meant to redirect had already finished.
+async function refusedForFocus({
+  message,
+  thread,
+}: {
+  message: Message;
+  thread: Thread;
+}): Promise<boolean> {
+  const holder = focusHolder(thread.id);
+  if (!holder || holder.userId === message.author.userId) {
+    return false;
+  }
+  logger.info('[chat] refused a message while focused', {
+    author: message.author.userId,
+    holder: holder.userId,
+    reason: holder.reason,
+    threadId: thread.id,
+  });
+  await thread
+    .postEphemeral(
+      message.author,
+      `gorkie is in focus mode (${holder.reason}) and can't respond until that turn ends. Send this again once it does.`,
+      { fallbackToDM: false }
+    )
+    .catch((error: unknown) => {
+      logger.warn('[chat] failed to post the focus notice', {
+        error,
+        threadId: thread.id,
+        userId: message.author.userId,
+      });
+    });
+  return true;
+}
+
 async function runTurn({
   defaultHandler,
   message,
@@ -55,6 +93,9 @@ async function runTurn({
   message: Message;
   thread: Thread;
 }): Promise<void> {
+  if (await refusedForFocus({ message, thread })) {
+    return;
+  }
   logger.info('[chat] turn started', {
     threadId: thread.id,
     author: message.author.userName,

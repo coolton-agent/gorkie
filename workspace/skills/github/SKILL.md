@@ -13,7 +13,7 @@ Everyone installs on their own account, so both steps apply to each person.
 
 1. Click **Gorkie** in the Slack sidebar, then open the **Home** tab.
 2. Click **Sign in with GitHub**. Both steps below then appear in the modal that opens.
-3. **Choose repositories** at <https://github.com/apps/gorkie-slack/installations/new>. This decides what Gorkie can reach. "Only select repositories" is the narrow choice.
+3. **Choose repositories**: the modal links straight to the install page. This decides what Gorkie can reach. "Only select repositories" is the narrow choice.
 4. **Prove who they are**: open <https://github.com/login/device>, enter the code shown, approve. The Home tab updates on its own.
 
 The code lasts about 15 minutes. If it runs out, click **Sign in with GitHub** again for a new one.
@@ -34,7 +34,7 @@ Picking "All repositories" at step 3 hands over every repo on the account, which
 
 Gorkie acts as them. Their name is on every issue, comment, and pull request it opens. Different people in one thread can be connected as different accounts, so act on behalf of whoever made the current request, not whoever spoke first.
 
-Whether a call waits for approval is that person's own setting, chosen per connection under **Configure** in the Home tab. GitHub has its own setting, and so does each MCP server they have added. The default asks before writing or deleting; the alternatives are asking for every call, or asking only before deleting. Someone who finds the prompts tiring should change that setting rather than be talked out of caring.
+The first GitHub call of a turn puts the thread in focus mode: gorkie is holding that person's credential, so it stops taking anyone else's messages until the turn ends, and tells them why. Whether a call waits for approval is that person's own setting, chosen per connection under **Configure** in the Home tab. GitHub has its own setting, and so does each MCP server they have added. The default asks before writing or deleting; the alternatives are asking for every call, or asking only before deleting. Someone who finds the prompts tiring should change that setting rather than be talked out of caring.
 
 Whatever the setting, say what you are about to do before a call that changes anything, so an approval prompt is never the first they hear of it, and so that someone who has turned prompts down still knows what happened.
 
@@ -42,18 +42,24 @@ Approving is a prompt, not a limit. What Gorkie can reach at all comes from the 
 
 ## Getting work out of the sandbox and into a repo
 
-Gorkie writes code in its sandbox, but the sandbox holds no GitHub credentials and cannot `git push`. The GitHub tools run on the host instead, so the file contents travel through a tool call rather than over git.
+The sandbox never holds a GitHub token, so there are two routes and the size of the change decides which one.
 
-The sequence:
+For one or two files, stay on the host: `github_create_branch` off the default branch, `github_create_or_update_file` with the contents, then `github_create_pull_request`. One call is one commit.
 
-1. Build and test in the sandbox as normal.
-2. `create_branch` off the default branch.
-3. `read_file` each file that changed, then `push_files` with `{ path, content }` for all of them. One call is one commit, so push the whole change together rather than file by file.
-4. `create_pull_request`, and report the URL it returns.
+For anything larger, work in the sandbox and push the branch:
 
-Every file's contents pass through the tool call, so this suits a handful of edited files. For anything larger, say what stands in the way rather than pushing a partial change: a hundred-file refactor is not something this path carries well.
+1. `github_checkout` to clone the repository into the sandbox. A plain `git clone` will not work: the sandbox holds no GitHub credentials, so only this tool can reach a private repository.
+2. Build and test there as normal, and commit on a feature branch.
+3. `github_push_branch` with the repository, the branch, and the checkout path.
+4. `github_create_pull_request`, and report the URL it returns.
 
-Never claim a branch, commit, or pull request exists without a tool result showing it. `git push` from inside the sandbox will fail, and the failure will look like a network problem rather than a missing credential.
+`github_checkout` and `github_push_branch` both ask for approval every time. Cloning pulls private code into a sandbox everyone in the thread shares, and pushing writes to a repository as them, so both are the person's call rather than yours.
+
+Both tools borrow their credential at the sandbox firewall for the length of one git command, so the token never reaches the filesystem and nothing lands in `.git/config`. `github_push_branch` refuses `main` and `master` outright: deliver a branch and a pull request.
+
+A plain `git clone`, `git fetch`, or `git push` run outside these two tools will fail, and the failure reads like a network problem rather than a missing credential.
+
+Never claim a branch, commit, or pull request exists without a tool result showing it.
 
 ## When GitHub does not work
 

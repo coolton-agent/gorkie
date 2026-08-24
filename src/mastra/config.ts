@@ -14,6 +14,10 @@ export const scheduledTasks = {
   minInterval: 30 * 60 * 1000,
 };
 
+export const focus = {
+  maxDuration: 30 * 60 * 1000,
+};
+
 export const workingModel = {
   ttl: 30 * 60 * 1000,
 };

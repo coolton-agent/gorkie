@@ -44,6 +44,14 @@ export const status: TypingStatusFn = (chunk, context) => {
     return truncate(`is spawning a ${label(rest).toLowerCase()} agent…`);
   }
 
+  // GitHub is no longer an MCP server, so it is not in mcpServerNames, but its
+  // tools keep the same `github_*` namespacing and should read the same way.
+  if (toolName.startsWith('github_')) {
+    return truncate(
+      `is using github: ${label(toolName.slice('github_'.length)).toLowerCase()}…`
+    );
+  }
+
   for (const server of mcpServerNames) {
     const prefix = `${server}_`;
     if (toolName.startsWith(prefix)) {

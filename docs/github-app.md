@@ -3,9 +3,8 @@
 Gorkie connects to GitHub through a GitHub App. People sign in from Slack's App
 Home with the OAuth device flow. They get a short code like `WDJB-MJHT`, enter
 it at <https://github.com/login/device>, and choose which repositories Gorkie
-may use. Gorkie then calls the hosted GitHub MCP server at
-`https://api.githubcopilot.com/mcp/` with that person's user access token, so it
-acts as them, limited to the repos they picked.
+may use. Gorkie then calls GitHub's API with that person's user access token,
+so it acts as them, limited to the repos they picked.
 
 Gorkie needs no inbound network access. It never receives webhooks and never
 handles an OAuth callback. All traffic is outbound, so this works behind
@@ -23,8 +22,8 @@ Register a GitHub App for the Gorkie Slack bot and report back the credentials.
 Gorkie is a Slack bot. People connect their own GitHub account from Slack's App
 Home using the OAuth device flow (they get a short code, enter it at
 github.com/login/device, and pick which repos Gorkie may use). Gorkie then calls
-the hosted GitHub MCP server at https://api.githubcopilot.com/mcp/ with that
-person's user access token, so it acts as them, limited to the repos they picked.
+GitHub's API with that person's user access token, so it acts as them, limited to
+the repos they picked.
 
 Gorkie needs no inbound network access. It never receives webhooks and never
 handles an OAuth callback. All traffic is outbound.

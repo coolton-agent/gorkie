@@ -1,12 +1,6 @@
 import { MCPClient } from '@mastra/mcp';
 import { z } from 'zod';
 import { listMCPServers, setMCPServerError } from '../db/queries/mcps';
-import { getGitHubPermission } from '../db/queries/settings';
-import {
-  GITHUB_MCP_URL,
-  GITHUB_SERVER_NAME,
-  githubAccessToken,
-} from '../lib/github';
 import { logger } from '../lib/logger';
 import type { MCPServerConfig, ToolPermission } from '../types';
 import { cleanMCPErrorMessage } from './errors';
@@ -218,34 +212,19 @@ export async function userMCPTools(
   userId: string
 ): Promise<Record<string, unknown>> {
   try {
-    const [servers, githubToken, githubPermission] = await Promise.all([
-      listMCPServers(userId),
-      githubAccessToken(userId),
-      getGitHubPermission(userId),
-    ]);
-    const connected = githubToken
-      ? [
-          ...servers,
-          {
-            name: GITHUB_SERVER_NAME,
-            permission: githubPermission,
-            token: githubToken,
-            url: GITHUB_MCP_URL,
-          },
-        ]
-      : servers;
-    if (connected.length === 0) {
+    const servers = await listMCPServers(userId);
+    if (servers.length === 0) {
       await dropClient(userId);
       return {};
     }
-    for (const server of connected) {
+    for (const server of servers) {
       mcpServerNames.add(server.name);
     }
-    const client = await resolveClient({ servers: connected, userId });
+    const client = await resolveClient({ servers, userId });
     const { tools, errors } = await client.listToolsWithErrors();
 
     for (const [id, tool] of Object.entries(tools)) {
-      const server = connected.find((entry) =>
+      const server = servers.find((entry) =>
         id.startsWith(`${entry.name}_`)
       )?.name;
       if (!server) {
@@ -260,11 +239,6 @@ export async function userMCPTools(
         counts.annotated += 1;
       }
       annotationCoverage.set(server, counts);
-    }
-
-    const githubError = errors[GITHUB_SERVER_NAME];
-    if (githubError) {
-      logger.warn('[mcp] github server failed', { error: githubError, userId });
     }
 
     await Promise.all(

@@ -12,11 +12,14 @@ import {
 } from '../db/queries/settings';
 import { logger } from './logger';
 
+// GitHub is no longer an MCP server, so these two are guards on the add-server
+// form: the name would collide with the native `github_*` tools, and the hosted
+// server is the thing those tools replaced.
 export const GITHUB_SERVER_NAME = 'github';
-export const GITHUB_MCP_URL = 'https://api.githubcopilot.com/mcp/';
+const HOSTED_GITHUB_MCP_URL = 'https://api.githubcopilot.com/mcp/';
 export function isGitHubUrl(url: string): boolean {
   try {
-    return new URL(url).host === new URL(GITHUB_MCP_URL).host;
+    return new URL(url).host === new URL(HOSTED_GITHUB_MCP_URL).host;
   } catch {
     return false;
   }
@@ -112,6 +115,45 @@ export async function awaitDeviceLogin({
   return { error: 'expired_token' };
 }
 
+// Refresh tokens are single use, so two concurrent refreshes race: one wins and
+// the loser's token is already spent. Tools resolve a token on every call, so
+// that is a real overlap, not a corner case.
+const refreshes = new Map<string, Promise<string | undefined>>();
+
+async function refreshAccount({
+  account,
+  spent,
+  userId,
+}: {
+  account: GitHubAccount;
+  spent: string;
+  userId: string;
+}): Promise<string | undefined> {
+  try {
+    const { authentication } = await refreshToken({
+      clientId: env.GITHUB_APP_CLIENT_ID,
+      clientSecret: env.GITHUB_APP_CLIENT_SECRET,
+      clientType: 'github-app',
+      refreshToken: spent,
+    });
+    const refreshed = toAccount(authentication);
+    await setGitHubAccount({
+      account: { ...refreshed, login: account.login },
+      userId,
+    });
+    return refreshed.token;
+  } catch (error) {
+    logger.warn('[github] token refresh failed', { error, userId });
+    // Only disconnect if nobody refreshed in the meantime. Wiping blindly would
+    // throw away a working credential another call just wrote.
+    const current = await getGitHubAccount(userId);
+    if (current && current.refreshToken !== spent) {
+      return current.token;
+    }
+    await setGitHubAccount({ account: undefined, userId });
+  }
+}
+
 export async function githubAccessToken(
   userId: string
 ): Promise<string | undefined> {
@@ -126,25 +168,17 @@ export async function githubAccessToken(
     return account.token;
   }
 
-  try {
-    const { authentication } = await refreshToken({
-      clientId: env.GITHUB_APP_CLIENT_ID,
-      clientSecret: env.GITHUB_APP_CLIENT_SECRET,
-      clientType: 'github-app',
-      refreshToken: account.refreshToken,
-    });
-    const refreshed = toAccount(authentication);
-    await setGitHubAccount({
-      account: { ...refreshed, login: account.login },
-      userId,
-    });
-    return refreshed.token;
-  } catch (error) {
-    // Refresh tokens are single use, so a failure here means signing in again
-    // rather than retrying.
-    logger.warn('[github] token refresh failed', { error, userId });
-    await setGitHubAccount({ account: undefined, userId });
+  const inFlight = refreshes.get(userId);
+  if (inFlight) {
+    return inFlight;
   }
+  const started = refreshAccount({
+    account,
+    spent: account.refreshToken,
+    userId,
+  }).finally(() => refreshes.delete(userId));
+  refreshes.set(userId, started);
+  return started;
 }
 
 export async function resolveGitHubLogin(
