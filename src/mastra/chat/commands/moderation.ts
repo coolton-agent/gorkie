@@ -5,7 +5,8 @@ import type { CommandHandler } from '../../types';
 import { rawText, withoutLeadingMentions } from '../message';
 
 function args(message: Message): string[] {
-  return withoutLeadingMentions(rawText(message)).trim().split(/\s+/).slice(1);
+  const tokens = withoutLeadingMentions(rawText(message)).trim().split(/\s+/);
+  return tokens[0] === '/gorkie' ? tokens.slice(2) : tokens.slice(1);
 }
 
 function targetId(value: string | undefined): string | undefined {
@@ -30,7 +31,7 @@ export const ban: CommandHandler = async ({ message, thread }) => {
   const values = args(message);
   const userId = targetId(values[0]);
   if (!userId) {
-    await thread.postEphemeral(message.author, 'Usage: `!ban @user [reason]`', { fallbackToDM: false });
+    await thread.postEphemeral(message.author, 'Usage: `/gorkie ban @user [reason]`', { fallbackToDM: false });
     return;
   }
   await banUser({ bannedBy: message.author.userId, reason: values.slice(1).join(' '), userId });
@@ -43,7 +44,7 @@ export const unban: CommandHandler = async ({ message, thread }) => {
   }
   const userId = targetId(args(message)[0]);
   if (!userId) {
-    await thread.postEphemeral(message.author, 'Usage: `!unban @user`', { fallbackToDM: false });
+    await thread.postEphemeral(message.author, 'Usage: `/gorkie unban @user`', { fallbackToDM: false });
     return;
   }
   const removed = await unbanUser(userId);

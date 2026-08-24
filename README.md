@@ -24,8 +24,8 @@ touching the host machine.
 - Optional opt-in allowlist (`OPT_IN_CHANNEL`): gate access to members of one
   channel, with an in-Slack opt-in card for everyone else.
 - Postgres-backed moderation bans. Admins configured through `ADMIN_USER_IDS`
-  can use `!ban @user [reason]`, `!unban @user`, and `!banstatus @user`.
-  Banned users are ignored before allowlist checks, commands, or agent runs.
+  can use `/gorkie ban @user [reason]` and `/gorkie unban @user`. Banned users
+  are ignored before allowlist checks, commands, or agent runs.
 - Per-thread [E2B][e2b] sandbox sessions: isolated cloud VMs, never the host.
   Full filesystem access (`read_file`/`write_file`/`edit_file`/`list_files`/
   `delete_file`/`file_stat`) plus shell command execution
@@ -113,7 +113,7 @@ local database named `gorkie`. Mastra auto-creates its tables on first run.
 | `SLACK_BOT_TOKEN` | yes | Bot User OAuth token (`xoxb-…`) |
 | `SLACK_APP_TOKEN` | yes | App-level token with `connections:write` (`xapp-…`) |
 | `OPT_IN_CHANNEL` | no | Slack channel id gating access to members only (opt-in allowlist); unset means everyone is allowed |
-| `ADMIN_USER_IDS` | no | Comma-separated Slack user IDs allowed to run `!ban`, `!unban`, and `!banstatus` |
+| `ADMIN_USER_IDS` | no | Comma-separated Slack user IDs allowed to run `/gorkie ban` and `/gorkie unban` |
 | `HACKCLUB_API_KEY` | yes | Hack Club AI proxy key, a gateway rung for every model |
 | `OPENCODE_API_KEY` | yes | opencode.ai/zen gateway key, tried alongside Hack Club |
 | `DATABASE_URL` | yes | Postgres connection string |
