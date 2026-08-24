@@ -1,12 +1,6 @@
 import { rawId } from '../../lib/ids';
+import type { UserBan } from '../../types/bans';
 import { db } from '../client';
-
-export type UserBan = {
-  bannedAt: Date;
-  bannedBy: string;
-  reason: string | null;
-  userId: string;
-};
 
 export async function getUserBan(userId: string): Promise<UserBan | undefined> {
   const row = await db
@@ -15,7 +9,7 @@ export async function getUserBan(userId: string): Promise<UserBan | undefined> {
     .where('user_id', '=', rawId(userId))
     .executeTakeFirst();
   if (!row) {
-    return undefined;
+    return;
   }
   return {
     bannedAt: row.banned_at,

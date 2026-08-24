@@ -1,12 +1,7 @@
-import { type ColumnType, sql } from 'kysely';
+import { sql } from 'kysely';
 import { db } from '../client';
 
-export interface UserBansTable {
-  banned_at: ColumnType<Date, Date, Date>;
-  banned_by: string;
-  reason: ColumnType<string | null, string | null, string | null>;
-  user_id: string;
-}
+export type { UserBansTable } from '../../types/bans';
 
 export async function createUserBansTable(): Promise<void> {
   await db.schema
