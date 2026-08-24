@@ -1,6 +1,7 @@
 import type { Message, Thread } from 'chat';
 import { z } from 'zod';
 import { isUserAllowed } from '../lib/allowed-users';
+import { isUserBanned } from '../lib/bans';
 import { logger } from '../lib/logger';
 import { attachments } from './attachments';
 import { slack } from './client';
@@ -79,6 +80,9 @@ export async function onMention(
   if (isFromBot(message)) {
     return;
   }
+  if (await isUserBanned(message.author.userId)) {
+    return;
+  }
   if (!(await isUserAllowed(message.author.userId))) {
     await offerOptIn({ thread, user: message.author });
     return;
@@ -99,6 +103,9 @@ export async function onSubscribedMessage(
 ): Promise<void> {
   await captureSearchToken({ raw: message.raw, thread });
   if (isFromBot(message) || isComment(message)) {
+    return;
+  }
+  if (await isUserBanned(message.author.userId)) {
     return;
   }
   const state = await threadState(thread);
@@ -129,6 +136,9 @@ export async function onDirectMessage(
 ): Promise<void> {
   await captureSearchToken({ raw: message.raw, thread });
   if (isFromBot(message)) {
+    return;
+  }
+  if (await isUserBanned(message.author.userId)) {
     return;
   }
   if (!(await isUserAllowed(message.author.userId))) {
