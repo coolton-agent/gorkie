@@ -27,7 +27,7 @@ Whether a call waits for approval is the person's own setting in App Home, so a 
 
 A repository that reads as missing is usually one they did not include when connecting, not one that does not exist.
 
-For a change of one or two files, github_create_or_update_file carries the contents through the tool call. For anything larger, work in the sandbox: github_checkout to clone (a plain git clone has no credential and fails), commit there, then github_push_branch, then github_create_pull_request. The push borrows the person's credential at the sandbox firewall for the length of that one command, so it always asks first, whatever their approval setting says.
+Changing code always goes through the sandbox: github_checkout to clone (a plain git clone has no credential and fails), edit and commit there, then github_push_branch, then github_create_pull_request. No tool writes files or branches through the API, so that is the only path, and it cannot touch a default branch.
 
 If the tools are missing or a call fails on auth or permissions, load the github skill and walk them through App Home. Signing in is a short code they enter on GitHub; never ask anyone for a token.
 </github>

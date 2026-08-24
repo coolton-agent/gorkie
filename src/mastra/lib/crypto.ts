@@ -32,7 +32,7 @@ export function encryptSecret(plaintext: string): string {
 // write.
 export function decryptSecret(stored: string): string {
   if (!stored.startsWith(PREFIX)) {
-    return stored;
+    throw new Error('Stored secret is not encrypted.');
   }
   const raw = Buffer.from(stored.slice(PREFIX.length), 'base64');
   const decipher = createDecipheriv(

@@ -42,24 +42,28 @@ Approving is a prompt, not a limit. What Gorkie can reach at all comes from the 
 
 ## Getting work out of the sandbox and into a repo
 
-The sandbox never holds a GitHub token, so there are two routes and the size of the change decides which one.
-
-For one or two files, stay on the host: `github_create_branch` off the default branch, `github_create_or_update_file` with the contents, then `github_create_pull_request`. One call is one commit.
-
-For anything larger, work in the sandbox and push the branch:
+Every code change takes the same route, however small. No tool writes files or branches through GitHub's API, so the sandbox is the only way in:
 
 1. `github_checkout` to clone the repository into the sandbox. A plain `git clone` will not work: the sandbox holds no GitHub credentials, so only this tool can reach a private repository.
 2. Build and test there as normal, and commit on a feature branch.
-3. `github_push_branch` with the repository, the branch, and the checkout path.
+3. `github_push_branch` with the repository and the branch.
 4. `github_create_pull_request`, and report the URL it returns.
 
-`github_checkout` and `github_push_branch` both ask for approval every time. Cloning pulls private code into a sandbox everyone in the thread shares, and pushing writes to a repository as them, so both are the person's call rather than yours.
+One route rather than two is deliberate. `github_push_branch` refuses `main` and `master`, and it is the only door onto a repository, so nothing gorkie does can land on a default branch without a pull request someone merges.
 
-Both tools borrow their credential at the sandbox firewall for the length of one git command, so the token never reaches the filesystem and nothing lands in `.git/config`. `github_push_branch` refuses `main` and `master` outright: deliver a branch and a pull request.
+Both tools borrow their credential at the sandbox firewall for the length of one git command, so the token never reaches the filesystem and nothing lands in `.git/config`.
 
 A plain `git clone`, `git fetch`, or `git push` run outside these two tools will fail, and the failure reads like a network problem rather than a missing credential.
 
 Never claim a branch, commit, or pull request exists without a tool result showing it.
+
+## Personal tokens
+
+Someone may add a classic personal access token under **Add token** in the Home tab. It exists for one reason: a GitHub App only reaches repositories it was installed on, so it cannot fork or open a pull request against a repository somebody else owns. A token is not installation-bounded, so it can.
+
+While a token is set it replaces the app for every repository, and the Home tab says so. Only `public_repo` tokens are accepted; anything carrying `repo` is refused, because that scope reaches every private repository the person can see.
+
+If a fork or a cross-repository pull request fails on permissions and they have no token set, that is the reason. Say so plainly, and offer the alternative: they can open the pull request themselves from a compare link, since a person is not installation-bounded either.
 
 ## When GitHub does not work
 

@@ -1,8 +1,8 @@
 import { logger } from '../../lib/logger';
 import { chat } from '../instance';
-import { registerCustomInstructions } from './custom-instructions';
 import { registerGitHub } from './github';
-import { registerMCPServers } from './mcp-servers';
+import { registerCustomInstructions } from './instructions';
+import { registerMCPServers } from './mcp';
 import { registerScheduledTasks } from './scheduled-tasks';
 import { publishHome } from './view';
 

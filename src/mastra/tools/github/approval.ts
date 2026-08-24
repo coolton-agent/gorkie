@@ -5,8 +5,6 @@ type Policy = (permission: ToolPermission) => boolean;
 const read: Policy = (permission) => permission === 'all';
 const write: Policy = (permission) => permission !== 'delete';
 
-// Explicit rather than inferred from tool names: a tool missing from this map
-// is not registered at all, so a new one cannot inherit a permissive default.
 export const POLICIES: Record<string, Policy> = {
   addAssignees: write,
   addIssueComment: write,
@@ -14,9 +12,7 @@ export const POLICIES: Record<string, Policy> = {
   addPullRequestComment: write,
   closeIssue: write,
   compareCommits: read,
-  createBranch: write,
   createIssue: write,
-  createOrUpdateFile: write,
   createPullRequest: write,
   getCiFailureContext: read,
   getCommit: read,

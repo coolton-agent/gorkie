@@ -1,30 +1,30 @@
 import { RadioSelect } from 'chat';
 import { type ToolPermission, toolPermissionSchema } from '../../types';
 
-const PRESETS: { description: string; label: string; value: ToolPermission }[] =
-  [
-    {
-      description: 'Even reading waits.',
-      label: 'Ask for everything',
-      value: 'all',
-    },
-    {
-      description: 'Reading runs. Writing and deleting wait.',
-      label: 'Ask before writing or deleting',
-      value: 'write',
-    },
-    {
-      description: 'Only deleting waits.',
-      label: 'Ask only before deleting',
-      value: 'delete',
-    },
-  ];
+const PRESETS = {
+  all: {
+    description: 'Even reading waits.',
+    label: 'Ask for everything',
+    status: '`asks for everything`',
+  },
+  delete: {
+    description: 'Only deleting waits.',
+    label: 'Ask only before deleting',
+    status: '`asks before deleting`',
+  },
+  write: {
+    description: 'Reading runs. Writing and deleting wait.',
+    label: 'Ask before writing or deleting',
+    status: '`asks before writing or deleting`',
+  },
+} satisfies Record<
+  ToolPermission,
+  { description: string; label: string; status: string }
+>;
 
-export const PRESET_LABELS: Record<ToolPermission, string> = {
-  all: '`asks for everything`',
-  delete: '`asks before deleting`',
-  write: '`asks before writing or deleting`',
-};
+export function presetStatus(permission: ToolPermission): string {
+  return PRESETS[permission].status;
+}
 
 export function decodePreset(value: string | undefined): {
   permission: ToolPermission;
@@ -49,10 +49,10 @@ export function presetRadio({
     id,
     label: 'When should Gorkie stop and ask?',
     initialOption: scope ? `${scope} ${permission}` : permission,
-    options: PRESETS.map((preset) => ({
+    options: Object.entries(PRESETS).map(([value, preset]) => ({
       label: preset.label,
       description: preset.description,
-      value: scope ? `${scope} ${preset.value}` : preset.value,
+      value: scope ? `${scope} ${value}` : value,
     })),
   });
 }

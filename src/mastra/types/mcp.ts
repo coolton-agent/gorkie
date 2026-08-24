@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const TOOL_PERMISSIONS = ['all', 'write', 'delete'] as const;
+const TOOL_PERMISSIONS = ['all', 'write', 'delete'] as const;
 
 export type ToolPermission = (typeof TOOL_PERMISSIONS)[number];
 
