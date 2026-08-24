@@ -26,6 +26,6 @@ export async function createGitHubCredentialsTable(): Promise<void> {
     .addColumn('created_at', 'timestamptz', (col) =>
       col.notNull().defaultTo(sql`now()`)
     )
-    .addPrimaryKeyConstraint('github_credentials_pk', ['user_id', 'kind'])
+    .addPrimaryKeyConstraint('github_credentials_pk', ['user_id'])
     .execute();
 }

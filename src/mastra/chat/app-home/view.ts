@@ -1,4 +1,4 @@
-import { listGitHubCredentials } from '../../db/queries/github';
+import { getGitHubCredential } from '../../db/queries/github';
 import { listMCPServers } from '../../db/queries/mcps';
 import {
   getGitHubPermission,
@@ -13,22 +13,22 @@ import { mcpServersBlocks } from './mcp';
 import { scheduledTasksBlocks } from './scheduled-tasks';
 
 async function buildHomeView(userId: string): Promise<Record<string, unknown>> {
-  const [instructions, mcpServers, credentials, githubPermission] =
+  const [instructions, mcpServers, credential, githubPermission] =
     await Promise.all([
       getInstructions(userId),
       listMCPServers(userId),
-      listGitHubCredentials(userId),
+      getGitHubCredential(userId),
       getGitHubPermission(userId),
     ]);
-  const app = credentials.find((c) => c.kind === 'app');
-  const installations = app ? await countInstallations(app.token) : 0;
+  const installations =
+    credential?.kind === 'app' ? await countInstallations(credential.token) : 0;
 
   const staticBlocks = [
     ...content.home.blocks,
     { type: 'divider' },
     ...customInstructionsBlocks(instructions),
     ...githubBlocks({
-      credentials,
+      credential,
       installations,
       permission: githubPermission,
     }),

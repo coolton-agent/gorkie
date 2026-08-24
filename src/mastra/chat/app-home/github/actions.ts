@@ -1,5 +1,5 @@
 import {
-  listGitHubCredentials,
+  getGitHubCredential,
   setGitHubCredential,
 } from '../../../db/queries/github';
 import {
@@ -41,10 +41,19 @@ export function registerConnect({
 
     polling.get(userId)?.controller.abort();
     const controller = new AbortController();
-    const opened = await slack.webClient.views.open({
-      trigger_id: event.triggerId ?? '',
-      view: connectView({ device, method: 'app' }),
-    });
+    let opened: Awaited<ReturnType<typeof slack.webClient.views.open>>;
+    try {
+      opened = await slack.webClient.views.open({
+        trigger_id: event.triggerId ?? '',
+        view: connectView({ device, method: 'app' }),
+      });
+    } catch (error) {
+      logger.error('[github] could not open the connect modal', {
+        error,
+        userId,
+      });
+      return;
+    }
     polling.set(userId, {
       controller,
       device,
@@ -151,9 +160,7 @@ export function registerConnect({
       return { action: 'clear' as const };
     }
 
-    const account = (await listGitHubCredentials(userId)).find(
-      (c) => c.kind === 'app'
-    );
+    const account = await getGitHubCredential(userId);
     if (account) {
       polling.get(userId)?.controller.abort();
       polling.delete(userId);

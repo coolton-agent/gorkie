@@ -2,9 +2,8 @@ import { refreshToken } from '@octokit/oauth-methods';
 import { z } from 'zod';
 import { env } from '@/env';
 import {
-  activeGitHubCredential,
   type GitHubCredential,
-  listGitHubCredentials,
+  getGitHubCredential,
   removeGitHubCredential,
   setGitHubCredential,
 } from '../../db/queries/github';
@@ -46,20 +45,18 @@ async function refreshAccount({
     logger.warn('[github] token refresh failed', { error, userId });
     // Only disconnect if nobody refreshed in the meantime. Wiping blindly would
     // throw away a working credential another call just wrote.
-    const current = (await listGitHubCredentials(userId)).find(
-      (c) => c.kind === 'app'
-    );
+    const current = await getGitHubCredential(userId);
     if (current && current.refreshToken !== spent) {
       return current.token;
     }
-    await removeGitHubCredential({ kind: 'app', userId });
+    await removeGitHubCredential(userId);
   }
 }
 
 export async function githubAccessToken(
   userId: string
 ): Promise<string | undefined> {
-  const account = await activeGitHubCredential(userId);
+  const account = await getGitHubCredential(userId);
   if (!account) {
     return;
   }

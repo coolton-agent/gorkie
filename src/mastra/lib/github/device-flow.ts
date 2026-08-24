@@ -56,8 +56,7 @@ export async function awaitDeviceLogin({
   interval,
   signal,
 }: DeviceLogin & { signal?: AbortSignal }): Promise<
-  | Omit<GitHubCredential, 'kind' | 'login' | 'scopes'>
-  | { error: string }
+  Omit<GitHubCredential, 'kind' | 'login' | 'scopes'> | { error: string }
 > {
   const deadline = Date.now() + expiresIn * 1000;
   let waitMs = interval * 1000;

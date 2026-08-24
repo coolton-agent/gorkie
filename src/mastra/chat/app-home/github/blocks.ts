@@ -5,33 +5,32 @@ import { presetStatus } from '../presets';
 import { ids } from './ids';
 
 export function githubBlocks({
-  credentials,
+  credential,
   installations,
   permission,
 }: {
-  credentials: GitHubCredential[];
+  credential: GitHubCredential | undefined;
   installations: number;
   permission: ToolPermission;
 }): Record<string, unknown>[] {
-  const [active] = credentials;
-  const login = credentials.find((c) => c.kind === 'app')?.login;
-  const pat = credentials.find((c) => c.kind === 'pat');
+  const login = credential?.kind === 'app' ? credential.login : undefined;
+  const pat = credential?.kind === 'pat' ? credential : undefined;
 
   let status = 'Not connected';
   let detail =
     'Sign in with the app for access scoped to the repositories you pick. A classic token also reaches repositories somebody else owns.';
-  if (active?.kind === 'pat') {
-    status = `*${active.login}*`;
+  if (credential?.kind === 'pat') {
+    status = `*${credential.login}*`;
     detail = `${presetStatus(permission)}  ·  using your personal token`;
-  } else if (active && installations > 0) {
-    status = `*${active.login}*`;
+  } else if (credential && installations > 0) {
+    status = `*${credential.login}*`;
     detail = `${presetStatus(permission)}  ·  Gorkie uses your GitHub account`;
-  } else if (active) {
-    status = `*${active.login}*`;
+  } else if (credential) {
+    status = `*${credential.login}*`;
     detail = `Not installed on any repositories, so Gorkie cannot reach code  ·  <${GITHUB_INSTALL_URL}|choose repositories>`;
   }
 
-  const connected = Boolean(active);
+  const connected = Boolean(credential);
   const forgets = [
     login ? 'your sign-in' : undefined,
     pat ? 'your token' : undefined,

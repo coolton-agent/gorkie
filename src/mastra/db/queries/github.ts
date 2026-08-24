@@ -35,27 +35,20 @@ function toCredential(row: Row): GitHubCredential {
   };
 }
 
-export async function listGitHubCredentials(
+export async function getGitHubCredential(
   userId: string
-): Promise<GitHubCredential[]> {
-  const rows = await db
+): Promise<GitHubCredential | undefined> {
+  const row = await db
     .selectFrom('github_credentials')
     .selectAll()
     .where('user_id', '=', rawId(userId))
-    // Newest first: connecting a credential is how someone chooses it, so the
-    // most recent one is the one they meant to use.
-    .orderBy('created_at', 'desc')
-    .execute();
-  return rows.map(toCredential);
+    .executeTakeFirst();
+  return row ? toCredential(row) : undefined;
 }
 
-export async function activeGitHubCredential(
-  userId: string
-): Promise<GitHubCredential | undefined> {
-  const [active] = await listGitHubCredentials(userId);
-  return active;
-}
-
+// One credential per person: connecting replaces whatever was there, so what
+// someone last connected is what Gorkie uses and there is no precedence rule to
+// explain.
 export async function setGitHubCredential({
   credential,
   userId,
@@ -63,34 +56,32 @@ export async function setGitHubCredential({
   credential: GitHubCredential;
   userId: string;
 }): Promise<void> {
-  const values = {
-    // Reconnecting is a choice, so it moves this credential to the front.
-    created_at: new Date(),
-    expires_at: credential.expiresAt ?? null,
-    login: credential.login,
-    refresh_token: credential.refreshToken
-      ? encryptSecret(credential.refreshToken)
-      : null,
-    scopes: credential.scopes.length ? credential.scopes.join(',') : null,
-    token: encryptSecret(credential.token),
-  };
-  await db
-    .insertInto('github_credentials')
-    .values({ ...values, kind: credential.kind, user_id: rawId(userId) })
-    .onConflict((oc) => oc.columns(['user_id', 'kind']).doUpdateSet(values))
-    .execute();
+  const id = rawId(userId);
+  await db.transaction().execute(async (tx) => {
+    await tx
+      .deleteFrom('github_credentials')
+      .where('user_id', '=', id)
+      .execute();
+    await tx
+      .insertInto('github_credentials')
+      .values({
+        expires_at: credential.expiresAt ?? null,
+        kind: credential.kind,
+        login: credential.login,
+        refresh_token: credential.refreshToken
+          ? encryptSecret(credential.refreshToken)
+          : null,
+        scopes: credential.scopes.length ? credential.scopes.join(',') : null,
+        token: encryptSecret(credential.token),
+        user_id: id,
+      })
+      .execute();
+  });
 }
 
-export async function removeGitHubCredential({
-  kind,
-  userId,
-}: {
-  kind: GitHubCredentialKind;
-  userId: string;
-}): Promise<void> {
+export async function removeGitHubCredential(userId: string): Promise<void> {
   await db
     .deleteFrom('github_credentials')
     .where('user_id', '=', rawId(userId))
-    .where('kind', '=', kind)
     .execute();
 }

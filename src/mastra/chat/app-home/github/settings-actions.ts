@@ -1,6 +1,6 @@
 import { CardText, Modal } from 'chat';
 import {
-  listGitHubCredentials,
+  getGitHubCredential,
   removeGitHubCredential,
 } from '../../../db/queries/github';
 import {
@@ -22,11 +22,11 @@ export function registerSettings({
 
   bot.onAction(ids.configure, async (event) => {
     const { userId } = event.user;
-    const [permission, credentials] = await Promise.all([
+    const [permission, credential] = await Promise.all([
       getGitHubPermission(userId),
-      listGitHubCredentials(userId),
+      getGitHubCredential(userId),
     ]);
-    const pat = credentials.find((c) => c.kind === 'pat');
+    const pat = credential?.kind === 'pat' ? credential : undefined;
     await event.openModal(
       Modal({
         callbackId: ids.configureModal,
@@ -54,10 +54,7 @@ export function registerSettings({
 
   bot.onAction(ids.disconnect, async (event) => {
     polling.get(event.user.userId)?.controller.abort();
-    await Promise.all([
-      removeGitHubCredential({ kind: 'app', userId: event.user.userId }),
-      removeGitHubCredential({ kind: 'pat', userId: event.user.userId }),
-    ]);
+    await removeGitHubCredential(event.user.userId);
     await publishHome(event.user.userId);
   });
 }
