@@ -5,6 +5,7 @@ import { input, output } from '../types/tools/index';
 import { getSandbox } from '../workspace';
 
 const MAX_OUTPUT_LINES = 500;
+const MAX_LINE_CHARS = 400;
 
 const rgMatchRecordSchema = z.object({
   data: z.object({
@@ -154,7 +155,11 @@ export const grepTool = createTool({
         lines,
         line_number: lineNumber,
       } = record.data.data;
-      const text = lines.text.replace(/\n$/, '');
+      const full = lines.text.replace(/\n$/, '');
+      const text =
+        full.length > MAX_LINE_CHARS
+          ? `${full.slice(0, MAX_LINE_CHARS)} ... (${full.length - MAX_LINE_CHARS} more characters on this line)`
+          : full;
       let fileLines = byFile.get(filePath.text);
       if (!fileLines) {
         fileLines = [];

@@ -1,12 +1,12 @@
 import { z } from 'zod';
 
-async function githubApi({
+export async function githubApi({
   path,
   token,
 }: {
   path: string;
   token: string;
-}): Promise<{ data: unknown } | { error: string }> {
+}): Promise<{ data: unknown; scopes: string[] } | { error: string }> {
   let response: Response;
   try {
     response = await fetch(`https://api.github.com${path}`, {
@@ -23,7 +23,14 @@ async function githubApi({
   if (!response.ok) {
     return { error: `GitHub returned ${response.status}.` };
   }
-  return { data: await response.json().catch(() => null) };
+  return {
+    data: await response.json().catch(() => null),
+    // Classic tokens report their scopes here; a fine-grained one sends nothing.
+    scopes: (response.headers.get('x-oauth-scopes') ?? '')
+      .split(',')
+      .map((scope) => scope.trim())
+      .filter(Boolean),
+  };
 }
 
 export async function resolveGitHubLogin(

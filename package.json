@@ -62,6 +62,7 @@
     "node": ">=24.0.0"
   },
   "patchedDependencies": {
-    "@mastra/core@1.61.0": "patches/@mastra+core@1.61.0.patch"
+    "@mastra/core@1.61.0": "patches/@mastra+core@1.61.0.patch",
+    "@mastra/e2b@0.9.0": "patches/@mastra+e2b@0.9.0.patch"
   }
 }

@@ -1,8 +1,8 @@
 import type { GitHubCredential } from '../../../db/queries/github';
 import { GITHUB_INSTALL_URL } from '../../../lib/github';
-import type { ToolPermission } from '../../../types';
-import { presetStatus } from '../presets';
+import type { GitHubPermission } from '../../../types';
 import { ids } from './ids';
+import { presetStatus } from './presets';
 
 export function githubBlocks({
   credential,
@@ -11,7 +11,7 @@ export function githubBlocks({
 }: {
   credential: GitHubCredential | undefined;
   installations: number;
-  permission: ToolPermission;
+  permission: GitHubPermission;
 }): Record<string, unknown>[] {
   const login = credential?.kind === 'app' ? credential.login : undefined;
   const pat = credential?.kind === 'pat' ? credential : undefined;
@@ -21,10 +21,10 @@ export function githubBlocks({
     'Sign in with the app for access scoped to the repositories you pick. A classic token also reaches repositories somebody else owns.';
   if (credential?.kind === 'pat') {
     status = `*${credential.login}*`;
-    detail = `${presetStatus(permission, true)}  ·  using your personal token`;
+    detail = `${presetStatus(permission)}  ·  using your personal token`;
   } else if (credential && installations > 0) {
     status = `*${credential.login}*`;
-    detail = `${presetStatus(permission, true)}  ·  Gorkie uses your GitHub account`;
+    detail = `${presetStatus(permission)}  ·  Gorkie uses your GitHub account`;
   } else if (credential) {
     status = `*${credential.login}*`;
     detail = `Not installed on any repositories, so Gorkie cannot reach code  ·  <${GITHUB_INSTALL_URL}|choose repositories>`;

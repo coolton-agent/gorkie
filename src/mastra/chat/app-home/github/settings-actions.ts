@@ -9,8 +9,8 @@ import {
 } from '../../../db/queries/settings';
 import { GITHUB_SETTINGS_URL } from '../../../lib/github';
 import { chat } from '../../instance';
-import { decodePreset, presetRadio } from '../presets';
 import { ids } from './ids';
+import { decodePreset, presetRadio } from './presets';
 import { polling } from './views';
 
 export function registerSettings({
@@ -33,7 +33,7 @@ export function registerSettings({
         title: 'Configure GitHub',
         submitLabel: 'Save',
         children: [
-          presetRadio({ id: 'permission', nothingDeletes: true, permission }),
+          presetRadio({ id: 'permission', permission }),
           CardText(
             pat
               ? 'Your token reaches everything its scopes allow, not a list of repositories. Disconnect to go back to the app.'
@@ -46,7 +46,7 @@ export function registerSettings({
 
   bot.onModalSubmit(ids.configureModal, async (event) => {
     await setGitHubPermission({
-      permission: decodePreset(event.values.permission).permission,
+      permission: decodePreset(event.values.permission),
       userId: event.user.userId,
     });
     await publishHome(event.user.userId);

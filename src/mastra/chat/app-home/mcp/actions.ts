@@ -9,8 +9,8 @@ import { findMCPUrlError } from '../../../mcp/security';
 import { findMCPConnectionError } from '../../../mcp/user-servers';
 import { mcpServerSchema } from '../../../types';
 import { chat } from '../../instance';
-import { decodePreset } from '../presets';
 import { ids, MAX_SERVERS } from './ids';
+import { decodePreset } from './presets';
 import { addServerModal, configureModal } from './views';
 
 export function registerMCPServers({

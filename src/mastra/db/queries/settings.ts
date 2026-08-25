@@ -1,5 +1,5 @@
 import { rawId } from '../../lib/ids';
-import { type ToolPermission, toolPermissionSchema } from '../../types';
+import { type GitHubPermission, githubPermissionSchema } from '../../types';
 import { db } from '../client';
 
 export async function getInstructions(
@@ -34,20 +34,20 @@ export async function setInstructions({
 
 export async function getGitHubPermission(
   userId: string
-): Promise<ToolPermission> {
+): Promise<GitHubPermission> {
   const row = await db
     .selectFrom('user_settings')
     .select('github_permission')
     .where('user_id', '=', rawId(userId))
     .executeTakeFirst();
-  return toolPermissionSchema.parse(row?.github_permission);
+  return githubPermissionSchema.parse(row?.github_permission);
 }
 
 export async function setGitHubPermission({
   permission,
   userId,
 }: {
-  permission: ToolPermission;
+  permission: GitHubPermission;
   userId: string;
 }): Promise<void> {
   const id = rawId(userId);

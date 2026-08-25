@@ -8,6 +8,7 @@ import {
   setGitHubCredential,
 } from '../../db/queries/github';
 import { logger } from '../logger';
+import { githubApi } from './api';
 import { toAccount } from './device-flow';
 
 const REFRESH_MARGIN_MS = 5 * 60 * 1000;
@@ -90,34 +91,19 @@ export async function verifyGitHubPat(
 ): Promise<
   { login: string; scopes: string[]; token: string } | { error: string }
 > {
-  let response: Response;
-  try {
-    response = await fetch('https://api.github.com/user', {
-      headers: {
-        Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${token}`,
-      },
-      signal: AbortSignal.timeout(10_000),
-    });
-  } catch {
-    return { error: 'Could not reach GitHub to check that token.' };
-  }
-  if (!response.ok) {
+  const body = await githubApi({ path: '/user', token });
+  if ('error' in body) {
     return { error: 'GitHub rejected that token.' };
   }
-  const parsed = patUserSchema.safeParse(await response.json());
-  if (!parsed.success) {
+  const login = patUserSchema.safeParse(body.data).data?.login;
+  if (!login) {
     return { error: 'GitHub returned an account this could not read.' };
   }
-  const scopes = (response.headers.get('x-oauth-scopes') ?? '')
-    .split(',')
-    .map((scope) => scope.trim())
-    .filter(Boolean);
-  if (scopes.length === 0) {
+  if (body.scopes.length === 0) {
     return {
       error:
         'That looks like a fine-grained token. Those only reach your own repositories, which the GitHub App already covers. Use a classic token with `public_repo`.',
     };
   }
-  return { login: parsed.data.login, scopes, token };
+  return { login, scopes: body.scopes, token };
 }

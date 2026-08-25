@@ -1,11 +1,11 @@
 import type { Message, Thread } from 'chat';
 import { z } from 'zod';
 import { isUserAllowed } from '../lib/allowed-users';
-import { focusHolder } from '../lib/focus';
 import { logger } from '../lib/logger';
 import { attachments } from './attachments';
 import { slack } from './client';
 import { handleCommand } from './commands';
+import { withHistory } from './history';
 import { rawText, withoutLeadingMentions } from './message';
 import { offerOptIn } from './onboarding';
 import { threadState } from './state';
@@ -47,43 +47,6 @@ function isComment(message: Message): boolean {
   return false;
 }
 
-// Refusing here, before defaultHandler, is what keeps a credentialed turn
-// sealed: the message never reaches Mastra, so it cannot join the active run as
-// an interjection. Queuing it instead would replay a stale steer after the work
-// it meant to redirect had already finished.
-async function refusedForFocus({
-  message,
-  thread,
-}: {
-  message: Message;
-  thread: Thread;
-}): Promise<boolean> {
-  const holder = focusHolder(thread.id);
-  if (!holder || holder.userId === message.author.userId) {
-    return false;
-  }
-  logger.info('[chat] refused a message while focused', {
-    author: message.author.userId,
-    holder: holder.userId,
-    reason: holder.reason,
-    threadId: thread.id,
-  });
-  await thread
-    .postEphemeral(
-      message.author,
-      `gorkie is in focus mode (${holder.reason}) and can't respond until that turn ends. Send this again once it does.`,
-      { fallbackToDM: false }
-    )
-    .catch((error: unknown) => {
-      logger.warn('[chat] failed to post the focus notice', {
-        error,
-        threadId: thread.id,
-        userId: message.author.userId,
-      });
-    });
-  return true;
-}
-
 async function runTurn({
   defaultHandler,
   message,
@@ -93,9 +56,6 @@ async function runTurn({
   message: Message;
   thread: Thread;
 }): Promise<void> {
-  if (await refusedForFocus({ message, thread })) {
-    return;
-  }
   logger.info('[chat] turn started', {
     threadId: thread.id,
     author: message.author.userName,
@@ -108,7 +68,10 @@ async function runTurn({
     text: message.text,
   });
 
-  await defaultHandler(thread, attachments(message));
+  await defaultHandler(
+    thread,
+    await withHistory({ message: attachments(message), thread })
+  );
 }
 
 export async function onMention(
@@ -155,10 +118,6 @@ export async function onSubscribedMessage(
   }
   if (await handleCommand({ message, thread })) {
     return;
-  }
-  if (!isFollowingThread) {
-    // Force history backfill for one-off mid-thread mentions that Mastra already marked subscribed.
-    await thread.unsubscribe().catch(() => undefined);
   }
   await runTurn({ defaultHandler, message, thread });
 }

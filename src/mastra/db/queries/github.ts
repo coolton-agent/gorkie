@@ -2,7 +2,7 @@ import { decryptSecret, encryptSecret } from '../../lib/crypto';
 import { rawId } from '../../lib/ids';
 import { db } from '../client';
 
-export type GitHubCredentialKind = 'app' | 'pat';
+type GitHubCredentialKind = 'app' | 'pat';
 
 export interface GitHubCredential {
   expiresAt: Date | undefined;

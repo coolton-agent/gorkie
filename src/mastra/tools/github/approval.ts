@@ -1,9 +1,9 @@
-import type { ToolPermission } from '../../types';
+import type { GitHubPermission } from '../../types';
 
-type Policy = (permission: ToolPermission) => boolean;
+type Policy = (permission: GitHubPermission) => boolean;
 
 const read: Policy = (permission) => permission === 'all';
-const write: Policy = (permission) => permission !== 'delete';
+const write: Policy = (permission) => permission !== 'never';
 
 export const POLICIES: Record<string, Policy> = {
   addAssignees: write,

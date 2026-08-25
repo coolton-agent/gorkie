@@ -35,8 +35,7 @@ runs commands and inspects files without touching the host machine.
 - Slack-native tools: read/summarize conversation history, list threads and
   channels, inspect channels and users, post to another thread/channel/DM,
   upload and download files, react, leave a thread. It reads only the current
-  conversation and public channels, and posts only to the channel already in
-  the conversation or a DM back to whoever asked.
+  conversation and public channels, and DMs only the person who asked.
 - Slack Canvas tools: create, list, read, edit, and look up sections.
 - Recurring scheduled tasks (cron-based, create/list/pause/resume/delete).
   Each run posts back into the conversation where it was scheduled.

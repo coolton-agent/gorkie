@@ -1,10 +1,5 @@
 export interface ThreadState {
+  lastSeenMessage?: string;
   respondOnThreadMessages?: boolean;
   searchToken?: string;
-}
-
-export interface FocusSession {
-  reason: string;
-  since: number;
-  userId: string;
 }

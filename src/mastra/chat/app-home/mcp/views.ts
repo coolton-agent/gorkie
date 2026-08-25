@@ -1,8 +1,8 @@
 import { CardText, Modal, TextInput } from 'chat';
 import { annotationCoverage } from '../../../mcp/user-servers';
 import type { MCPServerConfig } from '../../../types';
-import { presetRadio } from '../presets';
 import { ids } from './ids';
+import { presetRadio } from './presets';
 
 export function configureModal(server: MCPServerConfig) {
   const coverage = annotationCoverage.get(server.name);

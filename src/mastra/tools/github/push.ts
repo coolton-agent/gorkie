@@ -34,7 +34,7 @@ export function pushTool({
     execute: async ({ repository, branch }, context) => {
       const refusal = validateBranch(branch);
       if (refusal) {
-        return { error: refusal, success: false as const };
+        throw new Error(refusal);
       }
       const sandbox = await getSandbox(context.requestContext);
       if (!sandbox) {
@@ -51,13 +51,12 @@ export function pushTool({
             path
           );
           if (push.exitCode !== 0) {
-            return { error: failure(push), success: false as const };
+            throw new Error(failure(push));
           }
           const head = await run(sandbox, `git rev-parse '${branch}'`, path);
           return {
             branch,
             sha: `${head.stdout}`.trim(),
-            success: true as const,
           };
         },
         sandbox,

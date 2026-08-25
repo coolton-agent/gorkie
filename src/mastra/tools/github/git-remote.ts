@@ -100,10 +100,10 @@ export async function withCredential<T>({
   run: () => Promise<T>;
   sandbox: E2BSandbox;
   userId: string;
-}): Promise<T | { error: string }> {
+}): Promise<T> {
   const token = await githubAccessToken(userId);
   if (!token) {
-    return { error: 'GitHub is not connected. Ask them to sign in again.' };
+    throw new Error('GitHub is not connected. Ask them to sign in again.');
   }
   await sandbox.ensureRunning();
   // The whole window retries, not just the command: a recreated sandbox starts

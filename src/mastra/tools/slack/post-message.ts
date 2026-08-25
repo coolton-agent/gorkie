@@ -90,14 +90,15 @@ Errors: channel_not_found usually means the bot isn't a member of that private c
       const requester = requesterUser?.userName ?? ctx.userName;
       const bot = await botDisplayName(ctx.botUserId);
       // A user target is always the requester DMing themselves (see
-      // assertCanPostTo), so crediting them by name is redundant there.
-      const username =
-        requester && target.type !== 'user' ? `${requester} [${bot}]` : bot;
+      // assertCanPostTo), so crediting them is redundant there: the post keeps
+      // Gorkie's own name and avatar rather than wearing theirs.
+      const credited = Boolean(requester) && target.type !== 'user';
+      const username = credited ? `${requester} [${bot}]` : bot;
       const sent = await slack.webClient.chat.postMessage({
         channel,
         ...(threadTs ? { thread_ts: threadTs } : {}),
         ...markdownConverter.toSlackPayload({ markdown: message }),
-        ...(requesterUser?.avatarUrl
+        ...(credited && requesterUser?.avatarUrl
           ? { icon_url: requesterUser.avatarUrl }
           : {}),
         username,

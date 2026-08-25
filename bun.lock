@@ -48,6 +48,7 @@
   },
   "patchedDependencies": {
     "@mastra/core@1.61.0": "patches/@mastra+core@1.61.0.patch",
+    "@mastra/e2b@0.9.0": "patches/@mastra+e2b@0.9.0.patch",
   },
   "packages": {
     "@a2a-js/sdk-v0_3": ["@a2a-js/sdk@0.3.14", "", { "dependencies": { "uuid": "^11.1.0" }, "peerDependencies": { "@bufbuild/protobuf": "^2.10.2", "@grpc/grpc-js": "^1.11.0", "express": "^4.21.2 || ^5.1.0" }, "optionalPeers": ["@bufbuild/protobuf", "@grpc/grpc-js", "express"] }, "sha512-F6Ew1AtPzCLhTn8h9yiqTe7DiDf6XVrSnq9V1YqSl9eWqPm6anMveTiKdCSb/76cW0YiJc24rNaUrVezFFHbqQ=="],

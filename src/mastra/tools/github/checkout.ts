@@ -39,7 +39,7 @@ export function checkoutTool({
     execute: async ({ repository, branch }, context) => {
       const refusal = branch ? validateBranch(branch) : undefined;
       if (refusal) {
-        return { error: refusal, success: false as const };
+        throw new Error(refusal);
       }
       const sandbox = await getSandbox(context.requestContext);
       if (!sandbox) {
@@ -56,7 +56,7 @@ export function checkoutTool({
               `git clone --depth 50 ${remote} ${path}`
             );
             if (clone.exitCode !== 0) {
-              return { error: failure(clone), success: false as const };
+              throw new Error(failure(clone));
             }
           }
           if (branch) {
@@ -66,14 +66,13 @@ export function checkoutTool({
               path
             );
             if (fetch.exitCode !== 0) {
-              return { error: failure(fetch), success: false as const };
+              throw new Error(failure(fetch));
             }
           }
           const head = await run(sandbox, 'git rev-parse HEAD', path);
           return {
             path,
             sha: `${head.stdout}`.trim(),
-            success: true as const,
           };
         },
         sandbox,

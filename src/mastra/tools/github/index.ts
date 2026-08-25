@@ -5,15 +5,20 @@ import { logger } from '../../lib/logger';
 import { checkoutPolicy, POLICIES, pushPolicy } from './approval';
 import { checkoutTool } from './checkout';
 import { pushTool } from './push';
+import { handoff } from './utils';
 
 function toolName(name: string): string {
   return `github_${name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()}`;
 }
 
 export async function githubTools({
+  channelId,
+  isDM,
   threadId,
   userId,
 }: {
+  channelId: string | undefined;
+  isDM: boolean;
   threadId: string | undefined;
   userId: string;
 }): Promise<Record<string, unknown>> {
@@ -46,6 +51,13 @@ export async function githubTools({
           {
             ...tool,
             needsApproval: policy(permission),
+            // A shared thread cannot act on one person's account, so the tool
+            // hands back the DM to send instead of a result.
+            ...(isDM
+              ? {}
+              : {
+                  execute: () => handoff({ channelId, threadId, userId }),
+                }),
             toModelOutput: tool.toModelOutput
               ? (result: unknown) =>
                   result === undefined
@@ -61,6 +73,9 @@ export async function githubTools({
       })
     );
 
+    if (!isDM) {
+      return tools;
+    }
     if (threadId) {
       tools.github_checkout = checkoutTool({
         approval: checkoutPolicy(permission),

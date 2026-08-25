@@ -1,6 +1,6 @@
 import type { MCPServerConfig } from '../../../types';
-import { presetStatus } from '../presets';
 import { ids } from './ids';
+import { presetStatus } from './presets';
 
 export function mcpServersBlocks(
   servers: (MCPServerConfig & { lastError?: string })[]
