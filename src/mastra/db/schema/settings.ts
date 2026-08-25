@@ -19,4 +19,12 @@ export async function createUserSettingsTable(): Promise<void> {
       col.notNull().defaultTo(sql`now()`)
     )
     .execute();
+
+  // `ifNotExists` skips the whole statement on an existing table, so a column
+  // added after a deployment first booted never lands there.
+  await sql`
+    alter table user_settings
+      add column if not exists instructions text,
+      add column if not exists github_permission text
+  `.execute(db);
 }

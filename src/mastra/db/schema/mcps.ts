@@ -26,4 +26,11 @@ export async function createMCPServersTable(): Promise<void> {
     )
     .addPrimaryKeyConstraint('mcp_servers_pk', ['user_id', 'name'])
     .execute();
+
+  await sql`
+    alter table mcp_servers
+      add column if not exists token text,
+      add column if not exists permission text,
+      add column if not exists last_error text
+  `.execute(db);
 }

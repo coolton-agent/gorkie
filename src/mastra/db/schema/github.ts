@@ -28,4 +28,11 @@ export async function createGitHubCredentialsTable(): Promise<void> {
     )
     .addPrimaryKeyConstraint('github_credentials_pk', ['user_id'])
     .execute();
+
+  await sql`
+    alter table github_credentials
+      add column if not exists refresh_token text,
+      add column if not exists expires_at timestamptz,
+      add column if not exists scopes text
+  `.execute(db);
 }
